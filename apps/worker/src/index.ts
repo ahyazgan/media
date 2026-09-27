@@ -117,13 +117,18 @@ if (env.REDIS_URL) {
     // Zaman pencerelerine (ve takvime) göre tekrarlayan job: her koşuda aralık yeniden hesaplanır.
     await qWatch.upsertJobScheduler(`watch:${a.id}`, { every: await intervalMs(a) }, { name: "watch", data: { sourceId: a.id } });
   }
-  new Worker("watch", async (job) => {
+  const ww = new Worker("watch", async (job) => {
     const a = byId.get(job.data.sourceId as string)!;
     const ids = await watch(a, WATCH_SINCE());
-    for (const id of ids) await qProcess.add("process", { rawEventId: id }, { jobId: `process:${id}` });
+    for (const id of ids) await qProcess.add("process", { rawEventId: id }, { jobId: `process-${id}` });
     await qWatch.upsertJobScheduler(`watch:${a.id}`, { every: await intervalMs(a) }, { name: "watch", data: { sourceId: a.id } });
   }, { connection, concurrency: 1 });
+  // Kuyruk işlerinin hataları asla sessiz kalmamalı (ör. geçersiz iş kimliği tüm yayını durdurur).
+  const jobFailedLogger = (queue: string) => (job: { id?: string; name?: string; attemptsMade?: number } | undefined, err: Error) =>
+    log("job:failed", { queue, job: job?.name, id: job?.id, attempts: job?.attemptsMade, error: err.message });
+  ww.on("failed", jobFailedLogger("watch"));
   const pw = new Worker("process", async (job) => processOne(job.data.rawEventId as string), { connection, concurrency: 2 });
+  pw.on("failed", jobFailedLogger("process"));
   pw.on("failed", async (job, err) => {
     if (job && job.attemptsMade >= (job.opts.attempts ?? 3)) {
       await qDead.add("dead", { queue: "process", data: job.data, error: err.message, failedAt: new Date().toISOString() });
@@ -140,14 +145,15 @@ if (env.REDIS_URL) {
   await qJobs.upsertJobScheduler("metrics", { pattern: "10 0 * * *", tz: "Europe/Istanbul" }, { name: "metrics" });
   await qJobs.upsertJobScheduler("pending", { every: 5 * 60_000 }, { name: "pending" });
   if (env.EVDS_API_KEY) await qJobs.upsertJobScheduler("market", { every: 30 * 60_000 }, { name: "market" });
-  await qJobs.add("calendar", {}, { jobId: `calendar:boot:${Date.now()}` });
-  new Worker("jobs", async (job) => {
+  await qJobs.add("calendar", {}, { jobId: `calendar-boot-${Date.now()}` });
+  const jw = new Worker("jobs", async (job) => {
     if (job.name === "calendar") await calendarSync();
     else if (job.name === "bulletin") await bulletin();
     else if (job.name === "metrics") await metricsJob();
     else if (job.name === "market") await marketJob();
-    else if (job.name === "pending") { for (const id of await pendingIds()) await qProcess.add("process", { rawEventId: id }, { jobId: `process:${id}:${Date.now()}` }); }
+    else if (job.name === "pending") { for (const id of await pendingIds()) await qProcess.add("process", { rawEventId: id }, { jobId: `process-${id}-${Date.now()}` }); }
   }, { connection, concurrency: 1 });
+  jw.on("failed", jobFailedLogger("jobs"));
   log("worker:mode", { mode: "bullmq", redis: env.REDIS_URL });
 } else {
   log("worker:mode", { mode: "in-process" });
