@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src test eval",
     "build": "echo skip",
-    "eval": "tsx eval/cli.ts"
+    "eval": "tsx eval/cli.ts",
+    "cost:estimate": "tsx eval/estimate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
