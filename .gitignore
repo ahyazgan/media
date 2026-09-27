@@ -16,3 +16,9 @@ apps/web/public/sw.js.map
 apps/web/public/swe-worker-*.js
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Dağıtım: yedekler, Postgres TLS anahtarı, kök sertifikalar, mod işareti
+backups/
+deploy/pg/
+deploy/certs/*.pem
+deploy/.mode

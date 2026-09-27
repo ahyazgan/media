@@ -51,3 +51,38 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: playwright-report, path: apps/web/test-results, retention-days: 7 }
+
+  docker:
+    name: docker imajları · compose doğrulama
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      # env_file: ../.env zorunlu; CI'da örnek dosyadan üretilir
+      - run: cp .env.example .env && cat deploy/ci.env >> .env
+      - name: compose yapılandırması (her iki mod)
+        run: |
+          docker compose --env-file .env -f deploy/docker-compose.prod.yml --profile selfhost config --quiet
+          docker compose --env-file .env -f deploy/docker-compose.prod.yml -f deploy/docker-compose.vercel.yml config --quiet
+      - uses: docker/setup-buildx-action@v3
+      - name: worker imajı
+        uses: docker/build-push-action@v6
+        with: { context: ., file: apps/worker/Dockerfile, push: false, tags: "kaynak-worker:ci", load: true, cache-from: type=gha, cache-to: "type=gha,mode=max" }
+      - name: web imajı
+        uses: docker/build-push-action@v6
+        with: { context: ., file: apps/web/Dockerfile, push: false, tags: "kaynak-web:ci", load: true, build-args: "SITE_URL=https://ci.example.com", cache-from: type=gha, cache-to: "type=gha,mode=max" }
+      - name: imajlar açılıyor mu (duman testi)
+        run: |
+          docker network create kaynak-ci
+          docker run -d --name pg --network kaynak-ci -e POSTGRES_USER=kaynak -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=kaynak postgres:16-alpine
+          for i in $(seq 1 30); do docker exec pg pg_isready -U kaynak && break; sleep 2; done
+          # Worker açılışta migration + seed yapar; ilk döngüyü görene kadar bekle, sonra durdur (ağ yok: kaynak hataları beklenir)
+          docker run -d --name worker --network kaynak-ci -e DATABASE_URL=postgres://kaynak:ci@pg:5432/kaynak kaynak-worker:ci
+          sleep 25; docker logs worker 2>&1 | tail -20
+          docker exec pg psql -U kaynak -d kaynak -c "select id, enabled from sources order by id" | tee /tmp/sources.txt
+          grep -q resmi-gazete /tmp/sources.txt
+          docker run -d --name web --network kaynak-ci -p 3000:3000 -e DATABASE_URL=postgres://kaynak:ci@pg:5432/kaynak -e ADMIN_USER=ci -e ADMIN_PASSWORD=ci-sifre-123 kaynak-web:ci
+          for i in $(seq 1 30); do curl -fsS http://localhost:3000/api/health && break; sleep 2; done
+          curl -fsS http://localhost:3000/api/health | grep -q '"ok":true'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" = "200"

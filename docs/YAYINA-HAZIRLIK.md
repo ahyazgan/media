@@ -1,7 +1,7 @@
 # Yayına hazırlık kontrol listesi
 
 Kod tarafı Faz 0–5 ile tamamlandı. Aşağıdakiler kod dışı, hesap/anahtar/karar gerektiren ya da canlı ortamda
-doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına yapılabilir.
+doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına yapılabilir. Sunucu kurulumu, yedekler ve güncelleme için: [DAGITIM.md](DAGITIM.md).
 
 ## 1. Altyapı ve gizli anahtarlar (`.env`)
 

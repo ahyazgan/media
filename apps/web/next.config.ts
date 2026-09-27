@@ -15,11 +15,11 @@ if (existsSync(rootEnv)) {
 const config: NextConfig = {
   reactStrictMode: true,
   // Workspace paketleri kaynak (.ts/.tsx) olarak tüketilir; NodeNext tarzı ".js" içe aktarımları .ts'e çözülür.
-  transpilePackages: ["@kaynak/ui", "@kaynak/pipeline"],
+  transpilePackages: ["@kaynak/ui", "@kaynak/pipeline", "@kaynak/db"],
   // PGlite (wasm + import.meta.url) ve drizzle sürücüleri Node tarafında paketlenmez.
   // @kaynak/db Node'un yerel TypeScript yükleyicisiyle (Node ≥ 22.6 tip soyma) gerçek Node realm'inde çalışır;
   // PGlite'ın wasm/URL yükleyicisi Next dev sandbox'ında bozulur, bu yüzden paketlenmez.
-  serverExternalPackages: ["@kaynak/db", "@electric-sql/pglite", "pg", "drizzle-orm", "nodemailer", "web-push"],
+  serverExternalPackages: ["@electric-sql/pglite", "pg", "drizzle-orm", "nodemailer", "web-push"],
   poweredByHeader: false,
   webpack: (cfg) => {
     cfg.resolve.extensionAlias = { ".js": [".ts", ".tsx", ".js"], ".mjs": [".mts", ".mjs"] };

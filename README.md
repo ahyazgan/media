@@ -1,6 +1,6 @@
 # Kaynak
 
-Resmi kaynaktan, dakikalar içinde, doğrulanmış. Şartname: [docs/SPEC.md](docs/SPEC.md).
+Resmi kaynaktan, dakikalar içinde, doğrulanmış. Şartname: [docs/SPEC.md](docs/SPEC.md). Canlıya alma: [docs/DAGITIM.md](docs/DAGITIM.md) · kontrol listesi: [docs/YAYINA-HAZIRLIK.md](docs/YAYINA-HAZIRLIK.md).
 
 ## Yapı
 

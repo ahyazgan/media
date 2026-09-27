@@ -1,0 +1,20 @@
+# Mod B ek dosyası: web Vercel'de çalışır, Postgres'e internetten TLS ile bağlanır.
+#   docker compose --env-file .env -f deploy/docker-compose.prod.yml -f deploy/docker-compose.vercel.yml up -d --build
+# setup-vps.sh --vercel, deploy/pg/ altında kendinden imzalı sertifika üretir.
+# Vercel'de: DATABASE_URL=postgres://kaynak:<parola>@<sunucu-ip>:5432/kaynak?sslmode=no-verify
+# (trafik şifreli; sertifika doğrulanmaz → güçlü parola şart. Daha güvenlisi yönetilen Postgres, bkz. docs/DAGITIM.md)
+services:
+  postgres:
+    ports: ["5432:5432"]
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/tls/server.crt
+      - -c
+      - ssl_key_file=/tls/server.key
+      - -c
+      - password_encryption=scram-sha-256
+    volumes:
+      - ./pg:/tls:ro
