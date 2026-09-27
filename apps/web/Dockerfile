@@ -19,7 +19,8 @@ ARG NEXT_PUBLIC_AD_UNITS=
 ENV SITE_URL=$SITE_URL NEXT_PUBLIC_AD_PROVIDER=$NEXT_PUBLIC_AD_PROVIDER NEXT_PUBLIC_ADSENSE_CLIENT=$NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_GAM_NETWORK=$NEXT_PUBLIC_GAM_NETWORK NEXT_PUBLIC_AD_UNITS=$NEXT_PUBLIC_AD_UNITS
 # Derleme sırasında veritabanı yok: ISR sayfaları boş ön-render edilir, ilk istekten sonra (≤60 sn) gerçek veriyle yenilenir.
 ENV DATABASE_URL=pglite://memory
-RUN pnpm --filter @kaynak/web build
+# next/font yazı tiplerini derlemede fonts.googleapis.com'dan indirir; geçici ağ hatasına karşı 3 deneme
+RUN for i in 1 2 3; do pnpm --filter @kaynak/web build && exit 0; echo "[build] deneme $i basarisiz, yeniden deneniyor"; sleep 15; done; exit 1
 
 FROM build AS run
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0

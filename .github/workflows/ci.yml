@@ -44,7 +44,8 @@ jobs:
       - run: pnpm pipeline:run -- --fixture
       - run: pnpm pipeline:run -- --source kap --fixture
       - run: pnpm pipeline:run -- --calendar --fixture
-      - run: pnpm --filter @kaynak/web build
+      - name: web derlemesi (next/font ağ hatasına karşı 3 deneme)
+        run: for i in 1 2 3; do pnpm --filter @kaynak/web build && exit 0; echo "[build] deneme $i başarısız (next/font Google Fonts erişimi olabilir), yeniden deneniyor"; sleep 15; done; exit 1
       - run: pnpm --filter @kaynak/web exec playwright install --with-deps chromium
       - run: pnpm --filter @kaynak/web e2e
         env: { CI: "1" }
@@ -111,8 +112,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - name: web derlemesi (veritabanısız)
-        run: pnpm --filter @kaynak/web build
+      - name: web derlemesi (veritabanısız, 3 deneme)
+        run: for i in 1 2 3; do pnpm --filter @kaynak/web build && exit 0; echo "[build] deneme $i başarısız (next/font Google Fonts erişimi olabilir), yeniden deneniyor"; sleep 15; done; exit 1
         env: { DATABASE_URL: "pglite://memory", SITE_URL: "http://127.0.0.1:3100" }
       - run: pnpm rehearsal
       - uses: actions/upload-artifact@v4
