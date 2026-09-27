@@ -35,3 +35,25 @@ TÜİK "tahmin edildi" ifadeleri kurumun resmi dilidir; yazar ajanının yasakl�
 
 - `pnpm test:agents` → çevrimdışı testler her zaman koşar (kural motoru, bozuk fixture reddi, fixture bütünlüğü; her kaynak için en az 5 örnek).
 - `LIVE=1 ANTHROPIC_API_KEY=... pnpm test:agents` → her fixture için gerçek classify + write çağrısı yapılır ve çıktı `expected.json` + kural motoruna karşı doğrulanır. Yeni prompt değişikliği bu test geçmeden merge edilmez.
+
+## Canlı değerlendirme (`pnpm eval:agents`)
+
+Testlerden ayrı, rapor üreten bir düzenek. Her fixture'ı gerçek modelden geçirir, sınıflandırmayı `expected.json` ile karşılaştırır, haberi kural motorundan geçirir ve maliyet ile gecikmeyi ölçer.
+
+```bash
+pnpm eval:agents                              # tüm fixture'lar, gerçek model (kök .env'de ANTHROPIC_API_KEY)
+pnpm eval:agents -- --dry                     # anahtarsız: düzeneğin kendisini sınar
+pnpm eval:agents -- --source kap --only 03 --repeat 3   # tek örneği 3 kez: kararlılık
+pnpm eval:agents -- --write-all               # isNews=false çıksa da yaz
+MODEL_WRITE=claude-opus-5 pnpm eval:agents    # başka modelle karşılaştır
+```
+
+Rapor `packages/agents/eval-results/<zaman>-<mod>.md` (ve `.json`) olarak yazılır; bu klasör git'e girmez.
+
+| İşaret | Anlamı |
+|---|---|
+| ✅ geçti | Sınıflandırma beklentiye uydu, haber kural motorundan temiz geçti |
+| ⚠️ uyarı | Kalite kuralı takıldı (uzunluk, başlık, alıntı) ya da yasaklı kalıp yüzünden yeniden yazıldı; üretimde inceleme kuyruğuna düşerdi |
+| ❌ kaldı | Kategori, önem ya da isNews sapması; sayısal doğrulama reddi; yasak ifade; çağrı hatası |
+
+Kalan varsa çıkış kodu 1'dir (`--no-fail` ile 0). Önem kapısı (`REVIEW_THRESHOLD`) burada devre dışıdır; yalnızca kalite ölçülür. Bir tam koşu 22 fixture ile birkaç on sentlik maliyettedir; rapordaki gerçek tutara bakın.

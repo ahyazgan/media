@@ -129,6 +129,10 @@ importers:
       zod:
         specifier: ^4.1.11
         version: 4.6.5
+    devDependencies:
+      tsx:
+        specifier: ^4.20.5
+        version: 4.23.15
 
   packages/db:
     dependencies:

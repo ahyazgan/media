@@ -9,7 +9,16 @@ export interface EditResult {
   reasons: string[];
   grounding: GroundingResult;
   banned: BannedHit[];
+  /** Kaynağın kendi ifadesi olduğu için serbest bırakılan eşleşmeler (ör. TÜİK "tahmin edildi") */
+  sourceAttributed: BannedHit[];
 }
+
+/**
+ * Kurumların resmi olarak yayımladığı tahminler (TÜİK "yüzde 11,3 olarak tahmin edildi", TCMB enflasyon tahmini)
+ * haberin kendisidir. Bu kalıplar yalnızca aynı kök belgede geçiyorsa serbesttir; "olabilir", "bekleniyor",
+ * tavsiye ve abartı kalıpları her durumda yasaktır.
+ */
+const SOURCE_ATTRIBUTABLE: Record<string, string> = { tahmin: "tahmin", ongoruluyor: "öngör" };
 
 export interface EditOptions {
   importance: number;
@@ -40,16 +49,20 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
 
   const articleText = [article.title, article.dek, article.bodyMarkdown, ...article.keyFacts.map((k) => k.text)].join("\n");
   const grounding = numericGroundingCheck(article.numbersUsed, articleText, documentText);
-  const banned = findBanned({ title: article.title, dek: article.dek, body: article.bodyMarkdown, keyFacts: article.keyFacts.map((k) => k.text).join("\n") });
+  const allHits = findBanned({ title: article.title, dek: article.dek, body: article.bodyMarkdown, keyFacts: article.keyFacts.map((k) => k.text).join("\n") });
+  const docLower = documentText.toLocaleLowerCase("tr");
+  const isAttributed = (b: BannedHit) => b.id in SOURCE_ATTRIBUTABLE && docLower.includes(SOURCE_ATTRIBUTABLE[b.id]!);
+  const banned = allHits.filter((b) => !isAttributed(b));
+  const sourceAttributed = allHits.filter(isAttributed);
 
   if (!grounding.ok) {
     reasons.push(`numericGroundingCheck: belgede bulunamayan sayılar: ${grounding.missing.join(", ")}`);
-    return { decision: "reject", reasons, grounding, banned };
+    return { decision: "reject", reasons, grounding, banned, sourceAttributed };
   }
 
   if (banned.length) {
     reasons.push(`bannedPhrases: ${banned.map((b) => `${b.field}:"${b.match}"(${b.id})`).join(", ")}`);
-    return { decision: opts.isRetry ? "review" : "retry", reasons, grounding, banned };
+    return { decision: opts.isRetry ? "review" : "retry", reasons, grounding, banned, sourceAttributed };
   }
 
   const words = wordCount(article.bodyMarkdown);
@@ -61,13 +74,13 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
     if (!k.quoteFromSource.trim()) { reasons.push("keyFacts: boş quoteFromSource"); break; }
     if (!quoteAppearsIn(k.quoteFromSource, documentText)) { reasons.push(`keyFacts: alıntı belgede birebir yok: "${k.quoteFromSource.slice(0, 60)}…"`); break; }
   }
-  if (reasons.length) return { decision: "review", reasons, grounding, banned };
+  if (reasons.length) return { decision: "review", reasons, grounding, banned, sourceAttributed };
 
   if (opts.importance >= opts.reviewThreshold) {
     reasons.push(`importance ${opts.importance} >= eşik ${opts.reviewThreshold}: insan onayı`);
-    return { decision: "review", reasons, grounding, banned };
+    return { decision: "review", reasons, grounding, banned, sourceAttributed };
   }
-  return { decision: "publish", reasons, grounding, banned };
+  return { decision: "publish", reasons, grounding, banned, sourceAttributed };
 }
 
 /** Boşluk/tırnak/büyük-küçük farklarını tolere ederek alıntının belgede geçtiğini kontrol eder. */

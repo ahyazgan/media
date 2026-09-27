@@ -22,3 +22,6 @@ backups/
 deploy/pg/
 deploy/certs/*.pem
 deploy/.mode
+
+# Ajan değerlendirme raporları (yerel)
+packages/agents/eval-results/

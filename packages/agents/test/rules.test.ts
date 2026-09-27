@@ -45,3 +45,31 @@ describe("runEditRules", () => {
     expect(r.decision).toBe("review");
   });
 });
+
+describe("kaynağa atıflı tahmin ifadeleri", () => {
+  const DOC_TUIK = "Türkiye İstatistik Kurumu: İşsizlik oranı kadınlarda yüzde 11,3 olarak tahmin edildi. Bu yaş grubunda istihdam oranı yüzde 35,8 olarak tahmin edildi.";
+  const body = Array.from({ length: 25 }, () => "TÜİK işgücü istatistiklerini açıkladı ve oranlar bir önceki döneme göre değişti.").join(" ");
+  const base: WriteOutput = {
+    title: "TÜİK işgücü istatistiklerini açıkladı",
+    dek: "İşsizlik oranı kadınlarda yüzde 11,3 olarak tahmin edildi.",
+    bodyMarkdown: body,
+    keyFacts: [{ text: "Kadın işsizliği", quoteFromSource: "İşsizlik oranı kadınlarda yüzde 11,3 olarak tahmin edildi." }],
+    tickers: [], tags: ["tuik"], numbersUsed: ["11,3"],
+  };
+  it("belgede geçen 'tahmin' serbest, kayıt altına alınır", () => {
+    const r = runEditRules(base, DOC_TUIK, { importance: 3, reviewThreshold: 4 });
+    expect(r.decision).toBe("publish");
+    expect(r.banned).toEqual([]);
+    expect(r.sourceAttributed.map((b) => b.id)).toEqual(["tahmin"]);
+  });
+  it("belgede tahmin yoksa aynı ifade yine yasak", () => {
+    const r = runEditRules(base, DOC_TUIK.replace(/tahmin edildi/g, "açıklandı"), { importance: 3, reviewThreshold: 4 });
+    expect(r.decision).toBe("retry");
+  });
+  it("'bekleniyor' ve 'olabilir' belgede geçse bile yasak", () => {
+    const doc = DOC_TUIK + " Oranın düşmesi bekleniyor; artış olabilir.";
+    const r = runEditRules({ ...base, dek: "Oranın düşmesi bekleniyor." }, doc, { importance: 3, reviewThreshold: 4 });
+    expect(r.decision).toBe("retry");
+    expect(r.banned.map((b) => b.id)).toContain("bekleniyor");
+  });
+});

@@ -34,6 +34,7 @@ Gerçek model ve gerçek Resmi Gazete günü:
 ```bash
 ANTHROPIC_API_KEY=sk-... pnpm pipeline:run -- --date 2026-09-26
 LIVE=1 pnpm test:agents         # altın örnekler canlı modelle
+pnpm eval:agents                # rapor: sınıflandırma, kural motoru, maliyet, gecikme (--dry: anahtarsız)
 ```
 
 ## KAP (Faz 2)
