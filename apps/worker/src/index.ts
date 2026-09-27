@@ -22,7 +22,7 @@ await seed(handle.db);
 const log = (m: string, meta?: Record<string, unknown>) => console.log(new Date().toISOString(), `[${m}]`, JSON.stringify(meta ?? {}));
 
 const registry: SourceAdapter[] = [
-  new ResmiGazeteAdapter(), new KapAdapter(), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ feedUrl: env.TUIK_FEED_URL }),
+  new ResmiGazeteAdapter({ baseUrl: env.RG_BASE_URL }), new KapAdapter({ baseUrl: env.KAP_BASE_URL }), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ feedUrl: env.TUIK_FEED_URL }),
   new SpkAdapter(), new BddkAdapter(), new EpdkAdapter(), new BotasAdapter(),
 ];
 const enabledIds = new Set((await handle.db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((r) => r.id));
@@ -52,6 +52,7 @@ async function trackHealth(sourceId: string, outcome: Parameters<typeof recordWa
 
 /** Takvim saatine yakınsa (TCMB/TÜİK) sık tarama; aksi halde adapter'ın kendi penceresi. */
 async function intervalMs(a: SourceAdapter): Promise<number> {
+  if (env.WATCH_EVERY_SECONDS) return env.WATCH_EVERY_SECONDS * 1000; // prova / hazırlık ortamı
   const hot = a.schedule().hotEverySeconds ? await isCalendarHot(handle.db, a.id) : false;
   return intervalFor(a.schedule(), new Date(), hot) * 1000;
 }

@@ -8,7 +8,7 @@ export interface Alerter {
 }
 
 export function createAlerter(
-  env: Pick<Env, "ALERT_EMAIL" | "ALERT_TELEGRAM_CHAT_ID" | "TELEGRAM_BOT_TOKEN">,
+  env: Pick<Env, "ALERT_EMAIL" | "ALERT_TELEGRAM_CHAT_ID" | "TELEGRAM_BOT_TOKEN"> & { TELEGRAM_API_BASE?: string },
   mailer?: Mailer,
   fetchImpl: typeof fetch = fetch,
 ): Alerter {
@@ -27,7 +27,7 @@ export function createAlerter(
         jobs.push(mailer!.send({ to: env.ALERT_EMAIL!, subject: `[Kaynak] ${subject}`, text, html }));
       }
       if (canTelegram) {
-        jobs.push(fetchImpl(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        jobs.push(fetchImpl(`${env.TELEGRAM_API_BASE ?? "https://api.telegram.org"}/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ chat_id: env.ALERT_TELEGRAM_CHAT_ID, text: `${subject}\n\n${text}`.slice(0, 4000), disable_web_page_preview: true }),
         }));

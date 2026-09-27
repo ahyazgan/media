@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "build": "echo skip",
-    "run-cli": "tsx src/cli.ts"
+    "run-cli": "tsx src/cli.ts",
+    "rehearsal": "tsx src/rehearsal/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",

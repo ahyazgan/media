@@ -60,7 +60,7 @@ async function telegram(env: Env, a: Article, f: typeof fetch): Promise<{ ok: bo
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHANNEL_ID) return undefined;
   const text = `<b>${escapeHtml(a.title)}</b>\n${escapeHtml(a.dek)}\n${env.SITE_URL}/haber/${a.slug}`;
   try {
-    const res = await f(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const res = await f(`${env.TELEGRAM_API_BASE ?? "https://api.telegram.org"}/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ chat_id: env.TELEGRAM_CHANNEL_ID, text, parse_mode: "HTML", disable_web_page_preview: false }),
     });

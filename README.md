@@ -152,3 +152,9 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 - Sahte ajan (`fakeAgents`) KAP belgelerinde kısa satırlar yüzünden 120 kelimeye ulaşamayıp taslağı review'a düşürebilir; gerçek modelde bu sınır yoktur.
 - TÜİK/TCMB metinlerindeki "tahmin edildi" resmi ifadesi yasaklı kalıp listesine takılır ve haber review'a düşer (reddedilmez); gerçek yazar ajanı kurum ifadesini yeniden kurar.
 - `/_dev/ui` parçası precache'ten dışlanır (klasör adı `%5Fdev` sunucudan 400 döner).
+
+## Uçtan uca prova
+
+`pnpm rehearsal` gerçek Postgres ve Redis ile worker'ı (BullMQ) ve web'i (`next start`) süreç olarak çalıştırır; kaynak siteleri ve Telegram sahte bir sunucudadır, ajanlar sahtedir.
+Senaryo: olay → haber → revalidate → RSS → Telegram; ardından Resmi Gazete "yeniden tasarlanır", alarm gelmeli; düzelince iyileşme bildirimi gelmeli.
+CI'da her push'ta koşar (`rehearsal` işi, rapor `prova-raporu` artefaktında). Yerelde: `pnpm --filter @kaynak/web build` sonra `DATABASE_URL=postgres://… REDIS_URL=redis://… pnpm rehearsal`.

@@ -19,7 +19,8 @@
     "pipeline:run": "pnpm --filter @kaynak/pipeline run-cli",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "e2e": "pnpm --filter @kaynak/web e2e",
-    "eval:agents": "pnpm --filter @kaynak/agents eval"
+    "eval:agents": "pnpm --filter @kaynak/agents eval",
+    "rehearsal": "pnpm --filter @kaynak/pipeline rehearsal"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

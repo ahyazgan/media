@@ -17,6 +17,11 @@ const Env = z.object({
   TELEGRAM_CHANNEL_ID: z.string().optional(),
   /** Kaynak alarmları: e-posta (SMTP_URL gerekir) ve/veya Telegram sohbeti (TELEGRAM_BOT_TOKEN ile; kanal değil, editör sohbeti) */
   ALERT_EMAIL: z.string().optional(),
+  /** Hazırlık ortamı / prova: kaynak ve Telegram adreslerini sahte sunucuya yönlendirme, sabit tarama aralığı */
+  RG_BASE_URL: z.string().optional(),
+  KAP_BASE_URL: z.string().optional(),
+  TELEGRAM_API_BASE: z.string().default("https://api.telegram.org"),
+  WATCH_EVERY_SECONDS: z.coerce.number().int().positive().optional(),
   ALERT_TELEGRAM_CHAT_ID: z.string().optional(),
   INDEXNOW_KEY: z.string().optional(),
   EVDS_API_KEY: z.string().optional(),
