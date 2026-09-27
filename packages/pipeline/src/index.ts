@@ -11,3 +11,6 @@ export { createMailer, type Mailer, type MailMessage } from "./mail.js";
 export { composeBulletin, renderBulletin, sendBulletin, msUntilNext, istanbulDate, type BulletinData } from "./newsletter.js";
 export { createPushSender, sendPushForArticle, pushPayload, vapidConfigured, type PushSender } from "./push.js";
 export type { PublishHooks } from "./publish.js";
+export { snapshotArticle, snapshotOf, versionsOf, publishFromReview, rejectFromReview, publishCorrection, retractArticle, type ArticleSnapshot, type CorrectionPatch } from "./editorial.js";
+export { computeDailyMetrics, persistDailyMetrics, dashboardCounts, type DailyMetrics } from "./metrics.js";
+export { recordFailure, retryFailure } from "./failures.js";

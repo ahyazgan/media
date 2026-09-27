@@ -26,3 +26,40 @@
 .k-prose { max-width: var(--col-read); font-size: 17px; line-height: 1.6; color: var(--body); }
 .k-prose h1 { color: var(--ink); font-size: 32px; margin-bottom: 16px; }
 .k-prose h2 { color: var(--ink); font-size: 22px; margin: 24px 0 8px; }
+
+/* Düzeltme / geri çekme notu (şartname Faz 4 kabul) */
+.k-correction { margin: 0 0 20px; padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--tint); border-radius: var(--radius); font-size: 14px; }
+.k-correction--retracted { border-left-color: var(--down); }
+.k-correction__hist { margin-top: 8px; }
+.k-correction__hist summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.k-correction__hist ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.k-correction__hist time { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Admin */
+.k-admin { display: grid; gap: 20px; }
+.k-admin__nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 8px; font-size: 14px; font-weight: 600; }
+.k-admin__nav .k-label { margin-right: 6px; }
+.k-admin__body h1 { font-size: 28px; margin-bottom: 12px; }
+.k-admin__body h2 { font-size: 20px; margin: 24px 0 8px; }
+.k-admin__body h3 { font-size: 16px; font-family: var(--font-text); margin: 20px 0 6px; }
+.k-admin__tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.k-admin__tile { display: grid; gap: 2px; padding: 14px; background: var(--tint); border-radius: var(--radius); }
+.k-admin__tile b { font-size: 26px; font-family: var(--font-display); }
+.k-admin__tile span { font-size: 12px; color: var(--muted); }
+.k-admin__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.k-admin__table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 8px 6px; border-bottom: 2px solid var(--line); }
+.k-admin__table td { padding: 10px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.k-admin__flash { padding: 10px 12px; border-radius: var(--radius); background: var(--tint); font-size: 14px; }
+.k-admin__flash--ok { background: #e6f5ef; color: var(--up); }
+.k-admin__flash--err { background: #fbe9ec; color: var(--down); }
+.k-admin__split { display: grid; gap: 24px; }
+@media (min-width: 1100px) { .k-admin__split { grid-template-columns: minmax(0, 1fr) 420px; } }
+.k-admin__form { display: grid; gap: 10px; margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.k-admin__form--danger { border-color: #f0c2cc; }
+.k-admin__form label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--body); }
+.k-admin__form input, .k-admin__form textarea, .k-admin__search input, .k-admin__inline input { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); width: 100%; box-sizing: border-box; }
+.k-admin__form textarea { font-family: var(--font-text); line-height: 1.5; }
+.k-admin__actions { display: flex; gap: 8px; }
+.k-admin__search { display: flex; gap: 8px; max-width: 480px; margin-bottom: 14px; }
+.k-admin__inline { display: grid; gap: 6px; min-width: 180px; }
+.k-admin__doc { white-space: pre-wrap; font-size: 12px; line-height: 1.5; background: var(--tint); padding: 12px; border-radius: var(--radius); max-height: 80vh; overflow: auto; }

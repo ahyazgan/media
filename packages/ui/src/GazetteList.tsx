@@ -32,10 +32,10 @@ export function GazetteList({ entries, dateLabel, issueNo, LinkComponent = A, co
           <ul className="k-gaz__list">
             {items.map((e) => (
               <li key={e.externalId} className="k-gaz__item">
-                {e.articleSlug && e.status === "published"
+                {e.articleSlug && (e.status === "published" || e.status === "corrected")
                   ? <LinkComponent href={`/haber/${e.articleSlug}`} className="k-gaz__link k-gaz__link--news">{e.title}</LinkComponent>
                   : <a href={e.url} target="_blank" rel="noopener" className="k-gaz__link">{e.title}</a>}
-                {e.articleSlug && e.status === "published" && <span className="k-gaz__badge">Haber</span>}
+                {e.articleSlug && (e.status === "published" || e.status === "corrected") && <span className="k-gaz__badge">Haber</span>}
               </li>
             ))}
           </ul>

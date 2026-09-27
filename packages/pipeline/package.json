@@ -5,7 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./mail": "./src/mail.ts"
+    "./mail": "./src/mail.ts",
+    "./editorial": "./src/editorial.ts",
+    "./metrics": "./src/metrics.ts",
+    "./failures": "./src/failures.ts",
+    "./publish": "./src/publish.ts",
+    "./env": "./src/env.ts",
+    "./push": "./src/push.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

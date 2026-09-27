@@ -46,7 +46,7 @@ export function KapFeed({ items = [], LinkComponent = A, updatedAt, live = true,
           <li key={i.id} className={i.isNews ? "k-kap__i k-kap__i--news" : "k-kap__i"}>
             <time dateTime={i.publishedAt}>{fmtClock(i.publishedAt)}</time>
             <LinkComponent href={`/sirket/${i.code.toLowerCase()}`} className="k-kap__code">{i.code}</LinkComponent>
-            {i.isNews && i.status === "published"
+            {i.isNews && (i.status === "published" || i.status === "corrected")
               ? <LinkComponent href={i.href} className="k-kap__t k-kap__t--news">{i.title}</LinkComponent>
               : <a href={i.href} target="_blank" rel="noopener" className="k-kap__t">{i.title}</a>}
           </li>

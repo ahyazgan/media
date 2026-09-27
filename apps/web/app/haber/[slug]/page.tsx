@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { article: a } = r;
   return {
     title: a.title, description: a.dek,
+    robots: a.status === "retracted" ? { index: false, follow: true } : undefined,
     alternates: { canonical: `${SITE}/haber/${a.slug}` },
     openGraph: { type: "article", title: a.title, description: a.dek, publishedTime: a.publishedAt?.toISOString(), modifiedTime: a.updatedAt.toISOString(), section: categoryLabel(a.category), tags: a.tags },
   };
@@ -27,7 +28,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const r = await articleBySlug(slug);
   if (!r) notFound();
-  const { article: a, document: doc, event: ev } = r;
+  const { article: a, document: doc, event: ev, versions } = r;
   const [related, cos] = await Promise.all([relatedArticles(a), companiesByCodes(a.tickers)]);
   const html = await marked.parse(a.bodyMarkdown, { async: true });
   const paragraphs = html.split(/(?<=<\/p>)/);
@@ -48,6 +49,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     publisher: { "@type": "Organization", name: "Kaynak", url: SITE },
     isAccessibleForFree: true, citation: a.sourceUrl, articleSection: categoryLabel(a.category), keywords: a.tags.join(", "),
     mainEntityOfPage: `${SITE}/haber/${a.slug}`,
+    image: [`${SITE}/haber/${a.slug}/opengraph-image`],
+    ...(a.status === "corrected" && a.editorNote ? { correction: { "@type": "CorrectionComment", text: a.editorNote, datePublished: a.updatedAt.toISOString() } } : {}),
     ...(cos.length ? { about: cos.map((c) => ({ "@type": "Organization", name: c.name, tickerSymbol: c.kapCode, url: `${SITE}/sirket/${c.kapCode.toLowerCase()}` })) } : {}),
   };
 
@@ -62,8 +65,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <span><b style={{ color: "var(--ink)" }}>Kaynak Haber Merkezi</b> · Sorumlu editör: Yayın Kurulu</span>
           <span>Bu haber resmi belgeden otomatik üretilmiş ve editör kurallarından geçmiştir.</span>
           <span>{a.publishedAt ? `Yayın: ${dateTimeLabel(a.publishedAt)}` : ""}{a.updatedAt.getTime() - (a.publishedAt?.getTime() ?? 0) > 60_000 ? ` · Güncelleme: ${dateTimeLabel(a.updatedAt)}` : ""}</span>
-          {a.status !== "published" && <span className="k-article__status">{a.status === "retracted" ? "Geri çekildi" : "Düzeltildi"}{a.editorNote ? ` — ${a.editorNote}` : ""}</span>}
         </div>
+        {(a.status === "corrected" || a.status === "retracted") && (
+          <aside className={`k-correction${a.status === "retracted" ? " k-correction--retracted" : ""}`} aria-label={a.status === "retracted" ? "Geri çekildi" : "Düzeltildi"}>
+            <b>{a.status === "retracted" ? "Bu haber geri çekildi." : "Düzeltildi."}</b> {a.editorNote}
+            <span className="k-muted"> ({dateTimeLabel(a.updatedAt)})</span>
+            {versions.length > 0 && (
+              <details className="k-correction__hist">
+                <summary>Düzeltme geçmişi ({versions.length})</summary>
+                <ol>{versions.map((v) => <li key={v.id}><time>{dateTimeLabel(v.createdAt)}</time> — {v.reason.replace(/^(düzeltme|geri çekme) \([^)]*\): /, "")} <span className="k-muted">(v{v.version})</span></li>)}</ol>
+                <p className="k-muted" style={{ fontSize: 12, margin: "6px 0 0" }}>Kaynak hiçbir haberi silmez; her sürüm saklanır. <Link href="/duzeltme-politikasi">Düzeltme politikası</Link></p>
+              </details>
+            )}
+          </aside>
+        )}
         <AdSlot id="article-top" size="970x90" mobileSize="320x100" />
         <div className="k-article__body" dangerouslySetInnerHTML={{ __html: before }} />
         {after && <AdSlot id="article-inline" size="300x250" mobileSize="336x280" />}

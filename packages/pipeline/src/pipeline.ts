@@ -7,6 +7,7 @@ import type { BlobStore } from "./storage.js";
 import { storageKeyFor } from "./storage.js";
 import { makeSlug } from "./slug.js";
 import { linkCalendarEvent } from "./calendar.js";
+import { snapshotArticle } from "./editorial.js";
 
 /** Ajan çağrıları enjekte edilir: testte sahte, üretimde @kaynak/agents. */
 export interface Agents {
@@ -136,6 +137,7 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     return { kind: "review", articleId: article.id, reasons };
   }
   log("publish", { externalId: row.externalId, slug });
+  await snapshotArticle(deps.db, article, "ilk yayın (otomatik)");
   if (row.sourceId === "tcmb" || row.sourceId === "tuik") {
     const linked = await linkCalendarEvent(deps.db, row.sourceId, article.id, row.publishedAt);
     if (linked) log("calendar:link", { externalId: row.externalId, calendarEventId: linked });

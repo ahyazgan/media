@@ -1,12 +1,15 @@
 import { and, asc, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
-import { articles, calendarEvents, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
+import { articles, articleVersions, calendarEvents, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
 import { getDb } from "./db";
+
+/** Sitede görünen durumlar: düzeltilmiş haber de yayındadır (notuyla). Geri çekilenler yalnızca doğrudan bağlantıyla açılır. */
+export const LIVE = ["published", "corrected"] as const;
+const live = () => inArray(articles.status, [...LIVE]);
+export const isLive = (s: string | null | undefined) => s === "published" || s === "corrected";
 
 export async function latestArticles(limit = 20, category?: string): Promise<Article[]> {
   const { db } = await getDb();
-  const where = category
-    ? and(eq(articles.status, "published"), eq(articles.category, category as Article["category"]))
-    : eq(articles.status, "published");
+  const where = category ? and(live(), eq(articles.category, category as Article["category"])) : live();
   return db.select().from(articles).where(where).orderBy(desc(articles.importance), desc(articles.publishedAt)).limit(limit);
 }
 
@@ -16,13 +19,17 @@ export async function articleBySlug(slug: string) {
   if (!a || (a.status !== "published" && a.status !== "corrected" && a.status !== "retracted")) return null;
   const doc = a.documentId ? (await db.select().from(documents).where(eq(documents.id, a.documentId)).limit(1))[0] : undefined;
   const ev = a.rawEventId ? (await db.select().from(rawEvents).where(eq(rawEvents.id, a.rawEventId)).limit(1))[0] : undefined;
-  return { article: a, document: doc, event: ev };
+  // Düzeltme geçmişi: ilk yayın sürümü hariç, yeniden eskiye (şartname Faz 4 kabul: "Düzeltildi" notu ve geçmiş)
+  const versions = a.status === "corrected" || a.status === "retracted"
+    ? (await db.select().from(articleVersions).where(eq(articleVersions.articleId, a.id)).orderBy(desc(articleVersions.version))).filter((v) => v.version > 1) // v1 her zaman ilk yayın hâlidir
+    : [];
+  return { article: a, document: doc, event: ev, versions };
 }
 
 export async function relatedArticles(a: Article, limit = 5): Promise<Article[]> {
   const { db } = await getDb();
   return db.select().from(articles)
-    .where(and(eq(articles.status, "published"), eq(articles.category, a.category), sql`${articles.id} <> ${a.id}`))
+    .where(and(live(), eq(articles.category, a.category), sql`${articles.id} <> ${a.id}`))
     .orderBy(desc(articles.publishedAt)).limit(limit);
 }
 
@@ -125,7 +132,7 @@ export async function companyTimeline(code: string, limit = 100): Promise<Compan
 export async function articlesForCompany(code: string, limit = 30): Promise<Article[]> {
   const { db } = await getDb();
   return db.select().from(articles)
-    .where(and(eq(articles.status, "published"), sql`${articles.tickers} @> ARRAY[${code.toUpperCase()}]::text[]`))
+    .where(and(live(), sql`${articles.tickers} @> ARRAY[${code.toUpperCase()}]::text[]`))
     .orderBy(desc(articles.publishedAt)).limit(limit);
 }
 
@@ -168,13 +175,29 @@ export async function calendarUpcoming(days = 30, limit = 200, from = new Date()
     .from(calendarEvents).leftJoin(articles, eq(articles.id, calendarEvents.articleId))
     .where(and(gte(calendarEvents.scheduledAt, start), lt(calendarEvents.scheduledAt, end)))
     .orderBy(asc(calendarEvents.scheduledAt)).limit(limit);
-  return rows.map((r) => ({ id: r.id, scheduledAt: r.scheduledAt.toISOString(), institution: r.institution, title: r.title, sourceUrl: r.sourceUrl, articleHref: r.slug && r.status === "published" ? `/haber/${r.slug}` : null }));
+  return rows.map((r) => ({ id: r.id, scheduledAt: r.scheduledAt.toISOString(), institution: r.institution, title: r.title, sourceUrl: r.sourceUrl, articleHref: r.slug && isLive(r.status) ? `/haber/${r.slug}` : null }));
 }
 
 /** RSS için son yayınlanan haberler (yayın tarihine göre). */
 export async function recentArticles(limit = 50): Promise<Article[]> {
   const { db } = await getDb();
-  return db.select().from(articles).where(eq(articles.status, "published")).orderBy(desc(articles.publishedAt)).limit(limit);
+  return db.select().from(articles).where(live()).orderBy(desc(articles.publishedAt)).limit(limit);
+}
+
+/** Google News sitemap: son 48 saatte yayınlananlar (şartname §8). */
+export async function newsSitemapArticles(): Promise<Article[]> {
+  const { db } = await getDb();
+  return db.select().from(articles).where(and(live(), gte(articles.publishedAt, new Date(Date.now() - 48 * 3_600_000)))).orderBy(desc(articles.publishedAt)).limit(1000);
+}
+
+/** sitemap.xml verisi: tüm canlı haberler, şirketler ve Resmi Gazete günleri. */
+export async function sitemapData() {
+  const { db } = await getDb();
+  const arts = await db.select({ slug: articles.slug, updatedAt: articles.updatedAt }).from(articles).where(live()).orderBy(desc(articles.publishedAt)).limit(45_000);
+  const cos = await db.select({ kapCode: companies.kapCode, updatedAt: companies.updatedAt }).from(companies);
+  const days = await db.select({ d: sql<string>`to_char(${rawEvents.publishedAt} at time zone 'Europe/Istanbul', 'YYYY-MM-DD')` }).from(rawEvents)
+    .where(eq(rawEvents.sourceId, "resmi-gazete")).groupBy(sql`1`).orderBy(sql`1 desc`).limit(2000);
+  return { articles: arts, companies: cos, gazetteDays: days.map((r) => r.d) };
 }
 
 /** Basit başlık/dek araması (PWA share_target buraya düşer). */
@@ -184,6 +207,6 @@ export async function searchArticles(q: string, limit = 30): Promise<Article[]> 
   const { db } = await getDb();
   const like = `%${term.replace(/[%_]/g, " ")}%`;
   return db.select().from(articles)
-    .where(and(eq(articles.status, "published"), or(ilike(articles.title, like), ilike(articles.dek, like))))
+    .where(and(live(), or(ilike(articles.title, like), ilike(articles.dek, like))))
     .orderBy(desc(articles.publishedAt)).limit(limit);
 }

@@ -19,13 +19,15 @@ const config: NextConfig = {
   // PGlite (wasm + import.meta.url) ve drizzle sürücüleri Node tarafında paketlenmez.
   // @kaynak/db Node'un yerel TypeScript yükleyicisiyle (Node ≥ 22.6 tip soyma) gerçek Node realm'inde çalışır;
   // PGlite'ın wasm/URL yükleyicisi Next dev sandbox'ında bozulur, bu yüzden paketlenmez.
-  serverExternalPackages: ["@kaynak/db", "@electric-sql/pglite", "pg", "drizzle-orm", "nodemailer"],
+  serverExternalPackages: ["@kaynak/db", "@electric-sql/pglite", "pg", "drizzle-orm", "nodemailer", "web-push"],
   poweredByHeader: false,
   webpack: (cfg) => {
     cfg.resolve.extensionAlias = { ".js": [".ts", ".tsx", ".js"], ".mjs": [".mts", ".mjs"] };
     return cfg;
   },
   turbopack: { resolveExtensions: [".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"] },
+  // IndexNow anahtar dosyası: /<key>.txt (public/ dosyaları önceliklidir; robots.txt etkilenmez)
+  rewrites: async () => [{ source: "/:key([A-Za-z0-9-]{8,128}).txt", destination: "/api/indexnow?key=:key" }],
   headers: async () => [
     { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     { source: "/_dev/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },

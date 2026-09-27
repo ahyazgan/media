@@ -16,7 +16,7 @@ packages/pipeline dedupe → classify → (şirket bağlama) → verify → writ
 packages/ui       Fuşya Gazete token'ları ve bileşenler
 ```
 
-Durum: Faz 0 (iskelet), Faz 1 (Resmi Gazete), Faz 2 (KAP) ve Faz 3 (takvim + PWA + dağıtım) tamam; sırada Faz 4 (admin + SEO + kurumsal).
+Durum: Faz 0–4 tamam (iskelet, Resmi Gazete, KAP, takvim + PWA + dağıtım, admin + SEO + kurumsal); sırada Faz 5 (gelir: reklam, X paylaşımı).
 
 ## Hızlı başlangıç (Docker'sız)
 
@@ -77,6 +77,31 @@ pnpm --filter @kaynak/web build && pnpm --filter @kaynak/web start   # PWA yaln�
   kamuya açık bilgiden derlendi; ayrıştırıcılar RSS 2.0/Atom ve genel tablo/liste yapılarına hoşgörülüdür. İlk canlı çalıştırmada
   `--source tcmb`, `--source tuik` ve `--calendar` çıktısını kontrol edin; adres değiştiyse `.env`'den ezin. `packages/agents/fixtures/tcmb|tuik` sentetiktir.
   Lighthouse bu ortamda koşulamadı; PWA ölçütleri (manifest, SW, çevrimdışı, ikonlar) Playwright ile doğrulandı.
+
+## Admin, SEO ve kurumsal (Faz 4)
+
+```bash
+ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web start   # /admin (Basic Auth; parola boş/"change-me" ise 503)
+```
+
+- **/admin** (robots noindex, `no-store`): pano (şartname §11 ölçütleri: yayına geçiş p50/p95, otomatik yayın oranı, inceleme/red/grounding red,
+  düzeltme ve geri çekme, abone sayıları; bugün canlı, önceki günler worker'ın 00:10 işiyle `metrics_daily`'ye yazılır), **inceleme kuyruğu**
+  (belge metni yan yana; başlık/dek/gövde düzenlenip yayınlanır ya da gerekçeyle reddedilir; yayın Telegram/push/revalidate kancasını çalıştırır),
+  **düzeltme / geri çekme** (önce mevcut hâl `article_versions`'a alınır, sonra güncellenir; haber sayfasında "Düzeltildi" notu + geçmiş, JSON-LD
+  `correction`; geri çekilen sayfa kalır, `noindex`), **düzeltme talepleri** (iletişim formundan; 24 saat hedefi), **düşen işler** (üç denemeden
+  sonra `job_failures`; "yeniden dene" olayı `new`e döndürür, worker 5 dk içinde bekleyen süpürmesiyle işler).
+- Editoryal işlemler `packages/pipeline/src/editorial.ts`'te (yalnızca DB'ye bağımlı, testli); admin server action'ları bunları çağırır. Hard delete yok.
+- **SEO:** `sitemap.xml` (statik + canlı haberler + şirketler + Resmi Gazete günleri), `news-sitemap.xml` (son 48 saat, Google News biçimi),
+  IndexNow (`/<INDEXNOW_KEY>.txt` anahtar dosyası + her yayında ping), OG/Twitter görseli (`/haber/<slug>/opengraph-image`, Fraunces + DM Sans,
+  fontlar `apps/web/assets/fonts`, OFL), `NewsArticle` JSON-LD (`citation`, `about` şirketler, `correction`).
+- **Kurumsal:** `/kunye` ve `/kvkk` içerikleri `.env` (`PUBLISHER_*`, `HOSTING_PROVIDER`, `RESPONSIBLE_EDITOR`) ile doldurulur; `/iletisim` formu
+  (KVKK rıza, bot tuzağı) `correction_requests`'e yazar; `/duzeltme-politikasi` güncellendi.
+- **Publisher Center / Webmaster başvuruları** (kod dışı, yayına çıkınca): Google Publisher Center'a `news-sitemap.xml` ve künye adresi;
+  Search Console'a `sitemap.xml` + `news-sitemap.xml`; Bing Webmaster (IndexNow anahtarı otomatik doğrulanır); Yandex Webmaster. Hepsi için
+  `SITE_URL` HTTPS olmalı ve `/kunye` doldurulmuş olmalıdır.
+- **Not:** `next build` `rss.xml`/`sitemap.xml`/`news-sitemap.xml`'i derleme anında üretir ve veritabanına bağlanır; PGlite dosya modunda o sırada
+  başka bir süreç (worker ya da üretim sunucusu) aynı dosyayı açık tutuyorsa derleme "unreachable" hatasıyla düşer. Derlerken diğer süreci kapatın
+  ya da Postgres kullanın.
 
 ## Bilinen kısıtlar
 

@@ -1,0 +1,2 @@
+DM Sans (Colophon Foundry, Indian Type Foundry) ve Fraunces (Undercase Type) — SIL Open Font License 1.1.
+Google Fonts'tan (latin-ext alt kümesi) indirildi; yalnızca OG görseli (apps/web/app/haber/[slug]/opengraph-image.tsx) sunucu tarafında kullanır.

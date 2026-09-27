@@ -11,8 +11,8 @@ import { rawEvents, sources } from "@kaynak/db";
 import { importCalendars, KapAdapter, ResmiGazeteAdapter, TcmbAdapter, TuikAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import {
-  createMailer, createPushSender, DiskStore, fakeAgents, ingestEvents, isCalendarHot, liveAgents, loadEnv, makeOnPublished,
-  msUntilNext, processEvent, sendBulletin, SOURCE_NAMES, syncCalendar, type PipelineDeps,
+  createMailer, createPushSender, DiskStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
+  msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, type PipelineDeps,
 } from "@kaynak/pipeline";
 
 const env = loadEnv();
@@ -53,6 +53,20 @@ async function processOne(rawEventId: string) {
   if (!adapter) throw new Error(`adapter yok: ${row.sourceId}`);
   return processEvent(deps, adapter, row);
 }
+/**
+ * Bekleyen süpürme: status=new kalan olaylar (önceki çalıştırmada düşen, admin'in "yeniden dene" dediği, watch sonrası işlenemeyen).
+ * Süreç içi modda burada işlenir; BullMQ modunda process kuyruğuna eklenir (jobId tekil olduğundan çift iş olmaz).
+ */
+async function pendingIds(limit = 50): Promise<string[]> {
+  const rows = await handle.db.select({ id: rawEvents.id, sourceId: rawEvents.sourceId }).from(rawEvents).where(eq(rawEvents.status, "new")).limit(limit);
+  return rows.filter((r) => byId.has(r.sourceId)).map((r) => r.id);
+}
+async function metricsJob() {
+  const yesterday = istanbulDate(new Date(Date.now() - 86_400_000));
+  const m = await persistDailyMetrics(handle.db, yesterday);
+  await persistDailyMetrics(handle.db, istanbulDate(new Date()));
+  log("metrics", { date: yesterday, p50: m.timeToPublishP50, p95: m.timeToPublishP95, published: m.published, reviewed: m.reviewed, rejected: m.rejected });
+}
 async function calendarSync() {
   const r = await importCalendars({ tuikUrl: env.TUIK_CALENDAR_URL, tcmbUrl: env.TCMB_CALENDAR_URL, year: new Date().getFullYear() });
   for (const e of r.errors) log("calendar:error", e);
@@ -88,26 +102,61 @@ if (env.REDIS_URL) {
   }, { connection, concurrency: 1 });
   const pw = new Worker("process", async (job) => processOne(job.data.rawEventId as string), { connection, concurrency: 2 });
   pw.on("failed", async (job, err) => {
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 3)) await qDead.add("dead", { queue: "process", data: job.data, error: err.message, failedAt: new Date().toISOString() });
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 3)) {
+      await qDead.add("dead", { queue: "process", data: job.data, error: err.message, failedAt: new Date().toISOString() });
+      const rawEventId = job.data.rawEventId as string;
+      const [row] = await handle.db.select({ sourceId: rawEvents.sourceId }).from(rawEvents).where(eq(rawEvents.id, rawEventId)).limit(1);
+      await recordFailure(handle.db, { queue: "process", rawEventId, sourceId: row?.sourceId, error: err.message, attempts: job.attemptsMade }).catch((e) => console.error("[failures] kayıt hatası", (e as Error).message));
+    }
   });
 
   // Takvim: her gün 03:15 TR (ay başında tablo yenilenir; günlük çekmek ucuz ve idempotent). Bülten: BULLETIN_TIME (varsayılan 07:30 TR).
   const [bh, bm] = env.BULLETIN_TIME.split(":");
   await qJobs.upsertJobScheduler("calendar", { pattern: "15 3 * * *", tz: "Europe/Istanbul" }, { name: "calendar" });
   await qJobs.upsertJobScheduler("bulletin", { pattern: `${Number(bm)} ${Number(bh)} * * *`, tz: "Europe/Istanbul" }, { name: "bulletin" });
+  await qJobs.upsertJobScheduler("metrics", { pattern: "10 0 * * *", tz: "Europe/Istanbul" }, { name: "metrics" });
+  await qJobs.upsertJobScheduler("pending", { every: 5 * 60_000 }, { name: "pending" });
   await qJobs.add("calendar", {}, { jobId: `calendar:boot:${Date.now()}` });
-  new Worker("jobs", async (job) => { if (job.name === "calendar") await calendarSync(); else if (job.name === "bulletin") await bulletin(); }, { connection, concurrency: 1 });
+  new Worker("jobs", async (job) => {
+    if (job.name === "calendar") await calendarSync();
+    else if (job.name === "bulletin") await bulletin();
+    else if (job.name === "metrics") await metricsJob();
+    else if (job.name === "pending") { for (const id of await pendingIds()) await qProcess.add("process", { rawEventId: id }, { jobId: `process:${id}:${Date.now()}` }); }
+  }, { connection, concurrency: 1 });
   log("worker:mode", { mode: "bullmq", redis: env.REDIS_URL });
 } else {
   log("worker:mode", { mode: "in-process" });
+  /** Süreç içi modda üç deneme (5 sn, 10 sn), sonra job_failures kaydı (şartname §3 dead kuyruğu karşılığı). */
+  const processWithRetry = async (id: string, sourceId?: string) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try { await processOne(id); return; }
+      catch (e) {
+        console.error(`[process] hata (${attempt}/3)`, id, (e as Error).message);
+        if (attempt === 3) { await recordFailure(handle.db, { queue: "process", rawEventId: id, sourceId, error: (e as Error).message, attempts: 3 }).catch(() => {}); return; }
+        await new Promise((r) => setTimeout(r, 5000 * attempt));
+      }
+    }
+  };
   const loop = async (a: SourceAdapter) => {
     try {
       const ids = await watch(a, WATCH_SINCE());
-      for (const id of ids) { try { await processOne(id); } catch (e) { console.error("[process] hata", id, (e as Error).message); } }
+      for (const id of ids) await processWithRetry(id, a.id);
     } catch (e) { console.error("[watch] hata", a.id, (e as Error).message); }
     setTimeout(() => loop(a), await intervalMs(a));
   };
   for (const a of adapters) void loop(a);
+
+  // Bekleyen süpürme (5 dk): önceki çalıştırmadan kalan ya da yeniden denenmesi istenen olaylar
+  const pendingLoop = async () => {
+    try { for (const id of await pendingIds()) await processWithRetry(id); } catch (e) { console.error("[pending] hata", (e as Error).message); }
+    setTimeout(pendingLoop, 5 * 60_000);
+  };
+  setTimeout(pendingLoop, 30_000);
+  const metricsLoop = () => setTimeout(async () => {
+    try { await metricsJob(); } catch (e) { console.error("[metrics] hata", (e as Error).message); }
+    metricsLoop();
+  }, msUntilNext("00:10"));
+  metricsLoop();
 
   const calendarLoop = async () => {
     try { await calendarSync(); } catch (e) { console.error("[calendar] hata", (e as Error).message); }

@@ -147,6 +147,33 @@ export const reviewQueue = pgTable("review_queue", {
   resolvedBy: text("resolved_by"),
 });
 
+/** İletişim formundan gelen düzeltme/tekzip talepleri (şartname §10) — admin "düzeltme talebi" olarak listeler. */
+export const correctionRequestKind = pgEnum("correction_request_kind", ["duzeltme", "tekzip", "diger"]);
+export const correctionRequests = pgTable("correction_requests", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  kind: correctionRequestKind("kind").notNull().default("duzeltme"),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  articleSlug: text("article_slug"),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  resolvedBy: text("resolved_by"),
+  resolution: text("resolution"),
+}, (t) => [index("correction_requests_open").on(t.resolvedAt, t.createdAt)]);
+
+/** Üç denemeden sonra düşen işler (şartname §3 "dead kuyruğu"): süreç içi ve BullMQ modunda ortak kayıt; admin listeler ve yeniden dener. */
+export const jobFailures = pgTable("job_failures", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  queue: text("queue").notNull(),
+  rawEventId: text("raw_event_id").references(() => rawEvents.id),
+  sourceId: text("source_id"),
+  error: text("error").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  failedAt: timestamp("failed_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+}, (t) => [index("job_failures_open").on(t.resolvedAt, t.failedAt)]);
+
 export const metricsDaily = pgTable("metrics_daily", {
   date: date("date").primaryKey(),
   timeToPublishP50: real("time_to_publish_p50"),
@@ -155,6 +182,11 @@ export const metricsDaily = pgTable("metrics_daily", {
   reviewed: integer("reviewed").notNull().default(0),
   rejected: integer("rejected").notNull().default(0),
   corrections: integer("corrections").notNull().default(0),
+  retracted: integer("retracted").notNull().default(0),
+  autoPublished: integer("auto_published").notNull().default(0),
+  groundingRejects: integer("grounding_rejects").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Source = typeof sources.$inferSelect;
@@ -167,4 +199,9 @@ export type Company = typeof companies.$inferSelect;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+export type ArticleVersion = typeof articleVersions.$inferSelect;
+export type ReviewQueueRow = typeof reviewQueue.$inferSelect;
+export type CorrectionRequest = typeof correctionRequests.$inferSelect;
+export type JobFailure = typeof jobFailures.$inferSelect;
+export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type CompanyEvent = typeof companyEvents.$inferSelect;
