@@ -130,7 +130,7 @@ describe("KAP uçtan uca: bildirim listesi → şirketler → haber / bildirim g
     expect(kinds).toContain("review"); // bedelsiz sermaye artırımı: importance 4
     expect(published.every((p) => p.sourceId === "kap")).toBe(true);
     expect(pathsFor({ tickers: ["ORNEK"], slug: "x", category: "borsa", publishedAt: new Date() } as unknown as Parameters<typeof pathsFor>[0], "kap"))
-      .toEqual(["/", "/haber/x", "/kategori/borsa", "/sirket/ornek", "/sirket"]);
+      .toEqual(["/", "/haber/x", "/kategori/borsa", "/rss.xml", "/news-sitemap.xml", "/sitemap.xml", "/sirket/ornek", "/sirket"]);
   });
   it("companies upsert edilir; company_events isNews=false dahil bildirim geçmişini tutar", async () => {
     const cos = await h.db.select().from(companies);

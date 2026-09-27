@@ -37,7 +37,8 @@ export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {
 }
 
 export function pathsFor(a: Article, sourceId?: string): string[] {
-  const paths = ["/", `/haber/${a.slug}`, `/kategori/${a.category}`];
+  // RSS ve haber site haritası da hemen yenilenir: toplayıcılar ve Google News 5 dk önbelleği beklemesin.
+  const paths = ["/", `/haber/${a.slug}`, `/kategori/${a.category}`, "/rss.xml", "/news-sitemap.xml", "/sitemap.xml"];
   const d = a.publishedAt ?? new Date();
   if (!sourceId || sourceId === "resmi-gazete") paths.push(`/resmi-gazete/${d.toISOString().slice(0, 10)}`);
   for (const t of a.tickers) paths.push(`/sirket/${t.toLowerCase()}`);
