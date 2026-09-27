@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { HttpError, politeFetch, type PoliteFetchOptions } from "../http.js";
+import { StructureError } from "../health.js";
 import type { CronLike, FetchedDocument, RawEvent, SourceAdapter } from "../types.js";
 import { disclosurePdfUrl, disclosureUrl, parseDisclosureList, type KapClass, type KapDisclosure } from "./parse.js";
 
@@ -49,7 +50,13 @@ export class KapAdapter implements SourceAdapter {
 
   async fetchNew(since: Date): Promise<RawEvent[]> {
     const res = await politeFetch(this.listUrl(), { ...this.http, headers: { accept: "application/json", ...this.http.headers } });
-    const json: unknown = await res.json();
+    const body = await res.text();
+    let json: unknown;
+    try { json = JSON.parse(body); } catch { throw new StructureError(this.id, "bildirim listesi JSON değil (engelleme ya da uç nokta değişikliği)", body.slice(0, 400)); }
+    const rawCount = Array.isArray(json) ? json.length : json && typeof json === "object" ? Object.keys(json).length : 0;
+    if (rawCount > 0 && parseDisclosureList(json, this.baseUrl).length === 0) {
+      throw new StructureError(this.id, "bildirimler çözülemedi (disclosureIndex/başlık alanları değişmiş olabilir)", body.slice(0, 400));
+    }
     return this.eventsFromJson(json).filter((e) => e.publishedAt > since);
   }
 

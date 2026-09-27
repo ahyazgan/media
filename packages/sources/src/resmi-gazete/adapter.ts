@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { decodeHtml } from "../extract.js";
+import { looksLikeBlockPage, StructureError } from "../health.js";
 import { politeFetch, HttpError, type PoliteFetchOptions } from "../http.js";
 import type { CronLike, FetchedDocument, RawEvent, SourceAdapter } from "../types.js";
 import { parseDayPage, type GazetteItem, type GazetteSection } from "./parse.js";
@@ -76,10 +78,18 @@ export class ResmiGazeteAdapter implements SourceAdapter {
     let html: string;
     try {
       const res = await politeFetch(url, this.http);
-      html = await res.text();
+      html = decodeHtml(Buffer.from(await res.arrayBuffer()), res.headers.get("content-type"));
     } catch (e) {
       if (e instanceof HttpError && e.status === 404) return [];
       throw e;
+    }
+    if (!mukerrer) {
+      if (looksLikeBlockPage(html) || !/resm[iîİ]\s*gazete/i.test(html)) {
+        throw new StructureError(this.id, "fihrist yerine beklenmeyen sayfa geldi (engelleme, yönlendirme ya da yeniden tasarım)", html.slice(0, 400));
+      }
+      if (parseDayPage(html, url).length === 0) {
+        throw new StructureError(this.id, "fihristte hiç madde bağlantısı bulunamadı; sayfa yapısı değişmiş olabilir", html.slice(0, 400));
+      }
     }
     return this.eventsFromHtml(html, url);
   }

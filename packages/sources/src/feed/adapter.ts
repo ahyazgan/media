@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { politeFetch, type PoliteFetchOptions } from "../http.js";
+import { StructureError } from "../health.js";
 import type { CronLike, FetchedDocument, RawEvent, SourceAdapter } from "../types.js";
 import { parseFeed, type FeedItem } from "./parse.js";
 
@@ -39,6 +40,10 @@ export class FeedAdapter implements SourceAdapter {
   async fetchNew(since: Date): Promise<RawEvent[]> {
     const res = await politeFetch(this.feedUrl, { ...this.opts.http, headers: { accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5", ...this.opts.http?.headers } });
     const xml = await res.text();
+    if (!/<(rss|feed|rdf:RDF)[\s>]/i.test(xml)) throw new StructureError(this.id, "besleme RSS/Atom değil (adres değişmiş ya da engelleme)", xml.slice(0, 400));
+    if (/<(item|entry)[\s>]/i.test(xml) && parseFeed(xml, this.feedUrl).length === 0) {
+      throw new StructureError(this.id, "beslemede öğe var ama çözülemedi (alan adları değişmiş olabilir)", xml.slice(0, 400));
+    }
     return this.eventsFromXml(xml).filter((e) => e.publishedAt > since);
   }
 

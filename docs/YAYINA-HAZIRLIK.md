@@ -67,4 +67,5 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 - [ ] **Görsel regresyon** (`pnpm e2e` duman testleri var; ekran görüntüsü karşılaştırması eklenebilir).
 - [ ] **CSP zorlama:** canlıda bir hafta Report-Only günlüğünü izleyip `CSP_ENFORCE=1` yapın; reklam ağı yeni alan adı kullanırsa `middleware.ts`
       listesine ekleyin.
+- [ ] **Kaynak alarmları:** `ALERT_EMAIL` ve/veya `ALERT_TELEGRAM_CHAT_ID`; uptime izleyicisine `/api/health/sources` da ekleyin (docs/DAGITIM.md §8).
 - [ ] **Uptime izleme:** `/api/health` adresini (ör. UptimeRobot/BetterStack) 1 dk aralıkla izleyin; `ok:false` ya da `pendingEvents` sürekli artıyorsa worker durmuş demektir.

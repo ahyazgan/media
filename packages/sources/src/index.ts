@@ -1,6 +1,6 @@
 export * from "./types.js";
-export { politeFetch, type PoliteFetchOptions } from "./http.js";
-export { htmlToText, pdfToText, documentToText } from "./extract.js";
+export { politeFetch, HttpError, type PoliteFetchOptions } from "./http.js";
+export { htmlToText, pdfToText, documentToText, decodeHtml } from "./extract.js";
 export { ResmiGazeteAdapter, resmiGazete } from "./resmi-gazete/adapter.js";
 export { parseDayPage, parseIssueNo, normalizeSection, SECTION_LABELS, type GazetteItem, type GazetteSection } from "./resmi-gazete/parse.js";
 export { KapAdapter, kap, type KapOptions, type CompanyRef } from "./kap/adapter.js";
@@ -14,3 +14,4 @@ export { importCalendars, TUIK_DEFAULT_CALENDAR, TCMB_DEFAULT_CALENDAR, type Cal
 export { ListingAdapter, type ListingOptions, type ListingItem } from "./listing/adapter.js";
 export { SpkAdapter, BddkAdapter, EpdkAdapter, BotasAdapter, listingAdapterFor, LISTING_SOURCE_IDS, SPK_DEFAULT_LIST, BDDK_DEFAULT_LIST, EPDK_DEFAULT_LIST, BOTAS_DEFAULT_LIST } from "./listing/configs.js";
 export { fetchEvds, parseEvds, evdsUrl, DEFAULT_SERIES as EVDS_DEFAULT_SERIES, EVDS_BASE, type QuotePoint } from "./evds.js";
+export { StructureError, classifySourceError, looksLikeBlockPage, describeSourceError, type SourceErrorKind } from "./health.js";

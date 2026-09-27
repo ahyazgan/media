@@ -12,7 +12,7 @@ import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, Re
 import { hasApiKey } from "@kaynak/agents";
 import {
   createMailer, createPushSender, createStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
-  msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, syncMarketQuotes, type PipelineDeps,
+  alertIfNeeded, checkSources, createAlerter, recordWatch, msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, syncMarketQuotes, type PipelineDeps,
 } from "@kaynak/pipeline";
 
 const env = loadEnv();
@@ -38,13 +38,28 @@ const deps: PipelineDeps = {
   onPublished: makeOnPublished(env, { db: handle.db, push, log }),
 };
 
+// Kaynak sağlığı: yapı değişikliği, TLS/robots sorunu ya da uzun sessizlikte uyarı (ALERT_EMAIL / ALERT_TELEGRAM_CHAT_ID).
+const alerter = createAlerter(env, await createMailer(env));
+log("alerts", { channels: alerter.channels.length ? alerter.channels : ["yalnızca /api/health/sources ve admin"] });
+/** Sağlık kaydı ve uyarı hiçbir zaman taramayı düşürmez. */
+async function trackHealth(sourceId: string, outcome: Parameters<typeof recordWatch>[2]) {
+  try {
+    const row = await recordWatch(handle.db, sourceId, outcome);
+    if (!outcome.ok) log("watch:error", { source: sourceId, kind: row.lastErrorKind, failures: row.consecutiveFailures, status: row.status, error: row.lastError });
+    await alertIfNeeded(handle.db, row, alerter);
+  } catch (e) { console.error("[health] kayıt hatası", sourceId, (e as Error).message); }
+}
+
 /** Takvim saatine yakınsa (TCMB/TÜİK) sık tarama; aksi halde adapter'ın kendi penceresi. */
 async function intervalMs(a: SourceAdapter): Promise<number> {
   const hot = a.schedule().hotEverySeconds ? await isCalendarHot(handle.db, a.id) : false;
   return intervalFor(a.schedule(), new Date(), hot) * 1000;
 }
 async function watch(adapter: SourceAdapter, since: Date) {
-  const events = await adapter.fetchNew(since);
+  let events: Awaited<ReturnType<SourceAdapter["fetchNew"]>>;
+  try { events = await adapter.fetchNew(since); }
+  catch (e) { await trackHealth(adapter.id, { ok: false, error: e }); throw e; }
+  await trackHealth(adapter.id, { ok: true, fetched: events.length });
   const inserted = await ingestEvents(handle.db, events);
   log("watch", { source: adapter.id, fetched: events.length, new: inserted.length });
   return inserted.map((r) => r.id);
@@ -185,3 +200,10 @@ if (env.REDIS_URL) {
   }, msUntilNext(env.BULLETIN_TIME));
   bulletinLoop();
 }
+
+// Bayatlık kontrolü (her iki modda): tarama hata vermese de kaynak uzun süre susarsa uyarır.
+setInterval(() => {
+  checkSources(handle.db, [...enabledIds], alerter)
+    .then((r) => { const bad = r.filter((x) => x.status !== "ok"); if (bad.length) log("health:check", { bad }); })
+    .catch((e) => console.error("[health] kontrol hatası", (e as Error).message));
+}, 30 * 60_000).unref();

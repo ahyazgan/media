@@ -8,6 +8,8 @@
 import * as cheerio from "cheerio";
 import { createHash } from "node:crypto";
 import { politeFetch, type PoliteFetchOptions } from "../http.js";
+import { decodeHtml } from "../extract.js";
+import { looksLikeBlockPage, StructureError } from "../health.js";
 import type { CronLike, FetchedDocument, RawEvent, SourceAdapter } from "../types.js";
 import { atIstanbul, findDate } from "../calendar/parse.js";
 import { externalIdFor } from "../feed/parse.js";
@@ -46,7 +48,9 @@ export class ListingAdapter implements SourceAdapter {
 
   async fetchNew(since: Date): Promise<RawEvent[]> {
     const res = await politeFetch(this.listUrl, this.o.http);
-    const html = await res.text();
+    const html = decodeHtml(Buffer.from(await res.arrayBuffer()), res.headers.get("content-type"));
+    if (looksLikeBlockPage(html)) throw new StructureError(this.id, "liste yerine engelleme sayfası geldi", html.slice(0, 400));
+    if (this.parse(html).length === 0) throw new StructureError(this.id, "liste sayfasında duyuru bağlantısı bulunamadı; seçici ya da sayfa yapısı değişmiş olabilir", html.slice(0, 400));
     return this.eventsFromHtml(html).filter((e) => e.payload["undated"] === true || e.publishedAt > since);
   }
 

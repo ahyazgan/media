@@ -38,10 +38,18 @@ export async function pdfToText(bytes: Buffer): Promise<string> {
 
 export async function documentToText(mime: string, bytes: Buffer): Promise<string> {
   if (mime.includes("pdf")) return pdfToText(bytes);
-  // Resmi Gazete eski sayfalar windows-1254 olabilir; meta charset'e bak.
-  const head = bytes.subarray(0, 2048).toString("latin1");
-  const m = /charset=["']?([\w-]+)/i.exec(head);
-  const cs = (m?.[1] ?? "utf-8").toLowerCase();
-  const html = cs.includes("1254") || cs.includes("iso-8859-9") ? new TextDecoder("windows-1254").decode(bytes) : bytes.toString("utf8");
-  return htmlToText(html);
+  return htmlToText(decodeHtml(bytes));
+}
+
+/**
+ * HTML baytlarını doğru karakter setiyle çözer: önce Content-Type başlığı, sonra <meta charset>.
+ * Resmi Gazete'nin eski sayfaları windows-1254 olabilir; yanlış çözülürse "YÖNETMELİK" gibi bölüm adları bozulur.
+ */
+export function decodeHtml(bytes: Buffer | Uint8Array, contentType?: string | null): string {
+  const buf = Buffer.from(bytes);
+  const fromHeader = /charset=["']?([\w-]+)/i.exec(contentType ?? "")?.[1];
+  const fromMeta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(buf.subarray(0, 4096).toString("latin1"))?.[1];
+  const cs = (fromHeader ?? fromMeta ?? "utf-8").toLowerCase();
+  if (cs.includes("1254") || cs.includes("8859-9") || cs === "latin5") return new TextDecoder("windows-1254").decode(buf);
+  return buf.toString("utf8");
 }

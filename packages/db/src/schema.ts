@@ -174,6 +174,27 @@ export const jobFailures = pgTable("job_failures", {
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 }, (t) => [index("job_failures_open").on(t.resolvedAt, t.failedAt)]);
 
+/**
+ * Kaynak izleme sağlığı (her kaynak için tek satır). Worker her taramadan sonra günceller; /api/health/sources ve
+ * /admin/kaynaklar buradan okur. status: ok | degraded | failing | stale | unknown. alertedStatus: son uyarının durumu.
+ */
+export const sourceHealth = pgTable("source_health", {
+  sourceId: text("source_id").primaryKey().references(() => sources.id),
+  status: text("status").notNull().default("unknown"),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+  /** Son kez en az bir öğe dönen tarama (sessizlik/bayatlık tespiti için) */
+  lastItemsAt: timestamp("last_items_at", { withTimezone: true }),
+  lastFetched: integer("last_fetched").notNull().default(0),
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  lastError: text("last_error"),
+  lastErrorKind: text("last_error_kind"),
+  lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+  alertedStatus: text("alerted_status"),
+  alertedAt: timestamp("alerted_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Doğrudan reklam satışı talepleri (/reklam formu, şartname Faz 5). */
 export const adInquiries = pgTable("ad_inquiries", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -257,3 +278,4 @@ export type DistributionLogRow = typeof distributionLog.$inferSelect;
 export type WebVital = typeof webVitals.$inferSelect;
 export type MarketQuote = typeof marketQuotes.$inferSelect;
 export type CompanyEvent = typeof companyEvents.$inferSelect;
+export type SourceHealthRow = typeof sourceHealth.$inferSelect;

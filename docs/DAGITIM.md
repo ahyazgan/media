@@ -127,7 +127,14 @@ cd /opt/kaynak && ./deploy/update.sh
 
 ## 8. İzleme
 
-- `/api/health` adresini bir uptime servisiyle (UptimeRobot, BetterStack) 1 dakika aralıkla izleyin. `ok:false` ya da sürekli artan `pendingEvents` worker'ın durduğunu gösterir.
+- İki adresi bir uptime servisiyle (UptimeRobot, BetterStack) izleyin:
+  - `/api/health` (1 dk): site ve veritabanı ayakta mı. `ok:false` ya da sürekli artan `pendingEvents` worker'ın durduğunu gösterir.
+  - `/api/health/sources` (10 dk): etkin bir kaynak **Bozuk** ya da **Sessiz** ise 503 döner. Hata ayrıntısı herkese açık uçta gösterilmez; `/admin/kaynaklar` sayfasındadır.
+- **Kaynak alarmları:** `.env`'de `ALERT_EMAIL` (SMTP_URL gerekir) ve/veya `ALERT_TELEGRAM_CHAT_ID` (TELEGRAM_BOT_TOKEN'daki bot bu sohbete yazar; yayın kanalını değil, kendi sohbetinizi ya da editör grubunu verin). Kurallar:
+  - Sayfa yapısı değişti, engelleme sayfası geldi, TLS ya da robots.txt sorunu: ilk taramada uyarı.
+  - Ağ/HTTP hatası: üst üste 3 taramada uyarı (tek seferlik kesintiler susturulur).
+  - Sessizlik: kaynak kendi süresinden uzun hiç öğe döndürmezse (Resmi Gazete 30 sa, KAP 96 sa, TCMB/TÜİK 14 gün) uyarı; worker bunu 30 dakikada bir kontrol eder.
+  - Bozuk kaldıkça 24 saatte bir hatırlatma, düzelince "yeniden çalışıyor" mesajı.
 - Disk: `df -h` ve `du -sh /opt/kaynak/backups`. Belgeler ve yedekler zamanla büyür.
 - Günlükler Docker tarafından döndürülür (servis başına 5 × 20 MB).
 
@@ -138,6 +145,7 @@ cd /opt/kaynak && ./deploy/update.sh
 | Caddy sertifika alamıyor | DNS henüz yayılmadı ya da 80 portu kapalı | `dig +short <alan-adı>` sunucu IP'sini göstermeli; `ufw status` |
 | Web derlemesi `Killed` ile bitiyor | Bellek yetmiyor | Swap açık mı (`swapon --show`); gerekirse sunucuyu büyütün |
 | Worker `UNABLE_TO_VERIFY_LEAF_SIGNATURE` | Kamu SM kökü yok | §4 |
+| `/api/health/sources` 503 | Bir kaynak bozuk ya da sessiz | `/admin/kaynaklar`'da hata türüne bakın: `structure` → site değişmiş, ayrıştırıcı güncellenmeli; `tls` → §4; `robots` → kaynak botları engelliyor |
 | Admin 503 dönüyor | `ADMIN_PASSWORD` boş ya da `change-me` | `.env`'de değiştirip `... up -d web` |
 | `POSTGRES_PASSWORD .env içinde tanımlı olmalı` | Compose `.env`'yi bulamadı | Komutları `/opt/kaynak` içinden, `--env-file .env` ile çalıştırın |
 | Parolayı değiştirdim, bağlanamıyor | Postgres parolası yalnızca ilk kurulumda uygulanır | `... exec postgres psql -U kaynak -c "ALTER USER kaynak PASSWORD '<yeni>'"` |

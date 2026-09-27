@@ -15,6 +15,9 @@ const Env = z.object({
   BOT_CONTACT_EMAIL: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHANNEL_ID: z.string().optional(),
+  /** Kaynak alarmları: e-posta (SMTP_URL gerekir) ve/veya Telegram sohbeti (TELEGRAM_BOT_TOKEN ile; kanal değil, editör sohbeti) */
+  ALERT_EMAIL: z.string().optional(),
+  ALERT_TELEGRAM_CHAT_ID: z.string().optional(),
   INDEXNOW_KEY: z.string().optional(),
   EVDS_API_KEY: z.string().optional(),
   // Faz 3 — push, e-posta, takvim

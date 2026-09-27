@@ -17,3 +17,5 @@ export { recordFailure, retryFailure } from "./failures.js";
 export { postArticleToX, composeTweet, xConfigured, xPostedToday, X_API } from "./x.js";
 export { authorizationHeader, signatureBase, percentEncode } from "./oauth1.js";
 export { syncMarketQuotes, tickerItems, upsertQuotes, latestQuoteDate, type TickerItem } from "./market.js";
+export { recordWatch, alertIfNeeded, checkSources, summarizeSources, statusOf, SILENCE_HOURS, FAILING_AFTER, REMIND_AFTER_HOURS, type HealthStatus, type WatchOutcome, type SourcesHealthReport } from "./sourceHealth.js";
+export { createAlerter, type Alerter } from "./alerts.js";
