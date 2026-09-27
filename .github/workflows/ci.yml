@@ -15,10 +15,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # pnpm sürümü package.json#packageManager alanından okunur (iki yerde belirtmek hata verir)
       - uses: pnpm/action-setup@v4
-        with: { version: 11 }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
@@ -35,10 +35,10 @@ jobs:
       REVALIDATE_SECRET: ci-secret
     steps:
       - uses: actions/checkout@v4
+      # pnpm sürümü package.json#packageManager alanından okunur (iki yerde belirtmek hata verir)
       - uses: pnpm/action-setup@v4
-        with: { version: 11 }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       # Örnek veri: fixture pipeline'ları (ağ ve API anahtarı gerekmez)
       - run: pnpm pipeline:run -- --fixture
