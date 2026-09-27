@@ -13,3 +13,4 @@ export { parseTuikCalendar, parseTcmbCalendar, findDate, findAllDates, atIstanbu
 export { importCalendars, TUIK_DEFAULT_CALENDAR, TCMB_DEFAULT_CALENDAR, type CalendarImportOptions } from "./calendar/import.js";
 export { ListingAdapter, type ListingOptions, type ListingItem } from "./listing/adapter.js";
 export { SpkAdapter, BddkAdapter, EpdkAdapter, BotasAdapter, listingAdapterFor, LISTING_SOURCE_IDS, SPK_DEFAULT_LIST, BDDK_DEFAULT_LIST, EPDK_DEFAULT_LIST, BOTAS_DEFAULT_LIST } from "./listing/configs.js";
+export { fetchEvds, parseEvds, evdsUrl, DEFAULT_SERIES as EVDS_DEFAULT_SERIES, EVDS_BASE, type QuotePoint } from "./evds.js";

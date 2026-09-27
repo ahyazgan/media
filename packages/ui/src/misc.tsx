@@ -4,16 +4,18 @@
  */
 import type { ReactNode } from "react";
 
-export function MarketTicker({ items = [] }: { items?: { symbol: string; value: string; change: number }[] }) {
+/** Piyasa şeridi: TCMB EVDS günlük kurları (resmi kaynak); değişim bir önceki işlem gününe göre. Veri yoksa çizilmez. */
+export function MarketTicker({ items = [] }: { items?: { symbol: string; value: string; change: number; label?: string; date?: string }[] }) {
   if (!items.length) return null;
   return (
     <div className="k-ticker" aria-label="Piyasa şeridi">
       {items.map((i) => (
-        <span key={i.symbol} className="k-ticker__i">
+        <span key={i.symbol} className="k-ticker__i" title={i.label ? `${i.label}${i.date ? ` · ${i.date}` : ""}` : undefined}>
           <b>{i.symbol}</b> {i.value} <span className={i.change >= 0 ? "k-up" : "k-down"}>{i.change >= 0 ? "▲" : "▼"} {Math.abs(i.change).toFixed(2)}%</span>
         </span>
       ))}
-      <style>{`.k-ticker{display:flex;gap:20px;overflow-x:auto;font-size:13px;padding:8px var(--gutter);background:var(--tint);border-bottom:1px solid var(--line);white-space:nowrap;scrollbar-width:none}.k-ticker__i{font-variant-numeric:tabular-nums}`}</style>
+      <span className="k-ticker__src k-muted">TCMB gösterge kuru</span>
+      <style>{`.k-ticker{display:flex;gap:20px;overflow-x:auto;font-size:13px;padding:8px 12px;margin:0 0 8px;border-radius:var(--radius);background:var(--tint);white-space:nowrap;scrollbar-width:none}.k-ticker__i{font-variant-numeric:tabular-nums}.k-ticker__src{margin-left:auto;font-size:11px}`}</style>
     </div>
   );
 }

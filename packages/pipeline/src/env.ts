@@ -16,6 +16,7 @@ const Env = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHANNEL_ID: z.string().optional(),
   INDEXNOW_KEY: z.string().optional(),
+  EVDS_API_KEY: z.string().optional(),
   // Faz 3 — push, e-posta, takvim
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),

@@ -1,6 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, or } from "drizzle-orm";
-import { adInquiries, articles, articleVersions, correctionRequests, documents, jobFailures, metricsDaily, rawEvents, reviewQueue, webVitals, type Article } from "@kaynak/db";
+import { adInquiries, articles, articleVersions, correctionRequests, distributionLog, documents, jobFailures, metricsDaily, rawEvents, reviewQueue, webVitals, type Article } from "@kaynak/db";
 import { computeDailyMetrics, dashboardCounts } from "@kaynak/pipeline/metrics";
 import { istanbulDate } from "@kaynak/pipeline";
 import { getDb } from "./db";
@@ -76,4 +76,10 @@ export async function failures(limit = 200) {
   return db.select({ f: jobFailures, title: rawEvents.title, externalId: rawEvents.externalId, url: rawEvents.url })
     .from(jobFailures).leftJoin(rawEvents, eq(rawEvents.id, jobFailures.rawEventId))
     .orderBy(asc(jobFailures.resolvedAt), desc(jobFailures.failedAt)).limit(limit);
+}
+
+export async function distributionList(limit = 200) {
+  const { db } = await getDb();
+  return db.select({ id: distributionLog.id, channel: distributionLog.channel, status: distributionLog.status, externalId: distributionLog.externalId, detail: distributionLog.detail, createdAt: distributionLog.createdAt, articleId: distributionLog.articleId, slug: articles.slug, title: articles.title })
+    .from(distributionLog).leftJoin(articles, eq(articles.id, distributionLog.articleId)).orderBy(desc(distributionLog.createdAt)).limit(limit);
 }

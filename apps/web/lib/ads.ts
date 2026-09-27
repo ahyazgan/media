@@ -39,3 +39,13 @@ export type Consent = "all" | "essential" | null;
 export function readConsent(): Consent {
   try { const v = localStorage.getItem(CONSENT_KEY); return v === "all" || v === "essential" ? v : null; } catch { return null; }
 }
+
+export interface CategorySponsor { name: string; text: string; url: string }
+/** CATEGORY_SPONSORS='{"borsa":{"name":"…","text":"…","url":"https://…"}}' — kategori sayfasında "Sponsorlu" kartı (sunucu tarafı). */
+export function categorySponsor(category: string): CategorySponsor | undefined {
+  try {
+    const all = JSON.parse(process.env.CATEGORY_SPONSORS ?? "{}") as Record<string, Partial<CategorySponsor>>;
+    const s = all[category];
+    return s && s.name && s.text && s.url && /^https?:\/\//.test(s.url) ? (s as CategorySponsor) : undefined;
+  } catch { return undefined; }
+}

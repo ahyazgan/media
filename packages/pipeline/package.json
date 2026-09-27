@@ -11,7 +11,8 @@
     "./failures": "./src/failures.ts",
     "./publish": "./src/publish.ts",
     "./env": "./src/env.ts",
-    "./push": "./src/push.ts"
+    "./push": "./src/push.ts",
+    "./market": "./src/market.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

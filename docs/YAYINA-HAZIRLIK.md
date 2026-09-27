@@ -16,7 +16,7 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 - [ ] **Telegram:** BotFather'dan `TELEGRAM_BOT_TOKEN`; botu kanala yönetici yapın; `TELEGRAM_CHANNEL_ID`.
 - [ ] **X:** Developer Portal'da uygulama (Read and Write), resmi hesap için `X_CONSUMER_KEY/SECRET`, `X_ACCESS_TOKEN/SECRET`; `X_MAX_PER_DAY≤30`.
 - [ ] **IndexNow:** rastgele 32+ karakter `INDEXNOW_KEY`; `/<key>.txt` yanıt veriyor mu kontrol edin.
-- [ ] **EVDS:** `EVDS_API_KEY` (TCMB veri servisleri; ileride veri kartları için).
+- [ ] **EVDS:** `EVDS_API_KEY` → ana sayfa piyasa şeridi (TCMB gösterge kurları). Anahtar evds2.tcmb.gov.tr'den ücretsiz alınır.
 - [ ] **Belge deposu:** `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (+ MinIO için `S3_ENDPOINT`) → belgeler S3'e yazılır; boşsa `STORAGE_DIR`.
 
 ## 2. Kaynak erişimi (geliştirme ortamından doğrulanamayanlar)
@@ -61,8 +61,10 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 - [ ] **Şirket finansal tablo özetleri** (KAP FR bildirimlerinden tablo çıkarımı).
 - [ ] **Muhabir X/Telegram kaynakları** (resmi değil → her zaman review, iki bağımsız kaynak şartı; `official:false` yolu pipeline'da hazır).
 - [ ] **Kullanıcı hesapları ve kişiselleştirme** (şirket takibi, kategori tercihi).
-- [ ] **Piyasa şeridi** verisi (`MarketTicker` hazır; resmi kaynak olarak TCMB EVDS kurları bağlanabilir, BIST100 için lisanslı veri gerekir).
-- [ ] **Kategori sponsorluğu** (bülten sponsorluğu eklendi; kategori sayfası için slot yok).
+- [x] Piyasa şeridi (TCMB EVDS kurları), kategori sponsorluğu, CSP (Report-Only → `CSP_ENFORCE=1`), `/api/health`, admin dağıtım günlüğü — eklendi.
+- [ ] **BIST100 / altın** şerit verisi (lisanslı veri sağlayıcısı gerekir; EVDS'de gün sonu altın serisi eklenebilir).
 - [ ] **Search Console API ile index'e girme süresi** ölçütü (§11'de listelenir; API bağlantısı yok).
 - [ ] **Görsel regresyon** (`pnpm e2e` duman testleri var; ekran görüntüsü karşılaştırması eklenebilir).
-- [ ] **CSP** (nonce'lu Content-Security-Policy; reklam ağı alan adlarıyla birlikte ters vekilde).
+- [ ] **CSP zorlama:** canlıda bir hafta Report-Only günlüğünü izleyip `CSP_ENFORCE=1` yapın; reklam ağı yeni alan adı kullanırsa `middleware.ts`
+      listesine ekleyin.
+- [ ] **Uptime izleme:** `/api/health` adresini (ör. UptimeRobot/BetterStack) 1 dk aralıkla izleyin; `ok:false` ya da `pendingEvents` sürekli artıyorsa worker durmuş demektir.

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
 import { articles, articleVersions, calendarEvents, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
+import { tickerItems } from "@kaynak/pipeline/market";
 import { getDb } from "./db";
 
 /** Sitede görünen durumlar: düzeltilmiş haber de yayındadır (notuyla). Geri çekilenler yalnızca doğrudan bağlantıyla açılır. */
@@ -218,4 +219,10 @@ export async function breakingArticle(hours = 3): Promise<Article | null> {
     .where(and(live(), gte(articles.importance, 5), gte(articles.publishedAt, new Date(Date.now() - hours * 3_600_000))))
     .orderBy(desc(articles.publishedAt)).limit(1);
   return a ?? null;
+}
+
+/** Piyasa şeridi (TCMB EVDS kurları); veri yoksa boş → şerit gizlenir. */
+export async function marketTicker() {
+  const { db } = await getDb();
+  return tickerItems(db);
 }

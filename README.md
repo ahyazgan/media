@@ -128,7 +128,15 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 - **S3/MinIO:** `S3_BUCKET` + anahtarlar tanımlıysa belgeler S3'e (`S3_ENDPOINT` ile MinIO path-style), yoksa `storage/`.
 - **Güvenlik:** haber gövdesi Markdown'ı ham HTML'i kaçırır ve yalnızca http(s)/mailto bağlantılarına izin verir; `/api/revalidate` sırrı sabit
   zamanlı karşılaştırılır; herkese açık POST uçlarında IP başına hız sınırı; `nosniff`, `Referrer-Policy`, `X-Frame-Options`,
-  `Permissions-Policy`, HTTPS'te HSTS. CSP reklam ağı kaynakları nedeniyle ters vekile bırakıldı.
+  `Permissions-Policy`, HTTPS'te HSTS. **CSP:** middleware varsayılan olarak `Content-Security-Policy-Report-Only` gönderir (ihlaller
+  `/api/csp-report` → sunucu günlüğü); `CSP_ENFORCE=1` ile zorlanır. Nonce tabanlı sıkı CSP bilinçli olarak kullanılmadı: Next nonce'u yalnızca
+  dinamik sayfalara uygular ve ISR önbelleğini iptal ederdi; politika `'unsafe-inline'` + yalnızca izinli reklam alan adları, `object-src 'none'`,
+  `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'self'` ile sınırlıdır. Bu ortamda ana sayfa, haber, takvim ve bülten sayfalarında
+  (reklam rızası dahil) sıfır ihlal raporlandı.
+- **İşletim:** `/api/health` (DB, son olay zamanı, bekleyen olay) uptime izleme için; admin "Dağıtım günlüğü" Telegram/X sonuçlarını listeler.
+- **Piyasa şeridi:** `EVDS_API_KEY` tanımlıysa worker 30 dk'da bir TCMB EVDS gösterge kurlarını (USD/EUR/GBP) `market_quotes`'a çeker; ana sayfa
+  şeridi son değeri ve bir önceki işlem gününe göre değişimi gösterir (`pnpm pipeline:run -- --market`). BIST100 için lisanslı veri gerekir.
+- **Kategori sponsorluğu:** `CATEGORY_SPONSORS` JSON'u ile kategori sayfasında "Sponsorlu" kartı (`rel="sponsored"`).
 - **Ürün:** ana sayfada son 3 saatin importance ≥ 5 haberi "Son dakika" barında; `/bildirimler` push kategori tercihleri ve iptal; bülten
   sponsor bloğu (`BULLETIN_SPONSOR_*`, "Sponsorlu" etiketli).
 - **Testler:** `pnpm test` (vitest, 170 test) + `pnpm e2e` (Playwright: site, PWA/SW, rıza kapısı, admin auth, formlar, güvenlik başlıkları).

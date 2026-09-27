@@ -12,7 +12,7 @@ import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, Re
 import { hasApiKey } from "@kaynak/agents";
 import {
   createMailer, createPushSender, createStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
-  msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, type PipelineDeps,
+  msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, syncMarketQuotes, type PipelineDeps,
 } from "@kaynak/pipeline";
 
 const env = loadEnv();
@@ -70,6 +70,10 @@ async function metricsJob() {
   await persistDailyMetrics(handle.db, istanbulDate(new Date()));
   log("metrics", { date: yesterday, p50: m.timeToPublishP50, p95: m.timeToPublishP95, published: m.published, reviewed: m.reviewed, rejected: m.rejected });
 }
+async function marketJob() {
+  const r = await syncMarketQuotes(handle.db, env.EVDS_API_KEY);
+  log("market", r);
+}
 async function calendarSync() {
   const r = await importCalendars({ tuikUrl: env.TUIK_CALENDAR_URL, tcmbUrl: env.TCMB_CALENDAR_URL, year: new Date().getFullYear() });
   for (const e of r.errors) log("calendar:error", e);
@@ -119,11 +123,13 @@ if (env.REDIS_URL) {
   await qJobs.upsertJobScheduler("bulletin", { pattern: `${Number(bm)} ${Number(bh)} * * *`, tz: "Europe/Istanbul" }, { name: "bulletin" });
   await qJobs.upsertJobScheduler("metrics", { pattern: "10 0 * * *", tz: "Europe/Istanbul" }, { name: "metrics" });
   await qJobs.upsertJobScheduler("pending", { every: 5 * 60_000 }, { name: "pending" });
+  if (env.EVDS_API_KEY) await qJobs.upsertJobScheduler("market", { every: 30 * 60_000 }, { name: "market" });
   await qJobs.add("calendar", {}, { jobId: `calendar:boot:${Date.now()}` });
   new Worker("jobs", async (job) => {
     if (job.name === "calendar") await calendarSync();
     else if (job.name === "bulletin") await bulletin();
     else if (job.name === "metrics") await metricsJob();
+    else if (job.name === "market") await marketJob();
     else if (job.name === "pending") { for (const id of await pendingIds()) await qProcess.add("process", { rawEventId: id }, { jobId: `process:${id}:${Date.now()}` }); }
   }, { connection, concurrency: 1 });
   log("worker:mode", { mode: "bullmq", redis: env.REDIS_URL });
@@ -155,6 +161,13 @@ if (env.REDIS_URL) {
     setTimeout(pendingLoop, 5 * 60_000);
   };
   setTimeout(pendingLoop, 30_000);
+  if (env.EVDS_API_KEY) {
+    const marketLoop = async () => {
+      try { await marketJob(); } catch (e) { console.error("[market] hata", (e as Error).message); }
+      setTimeout(marketLoop, 30 * 60_000);
+    };
+    void marketLoop();
+  }
   const metricsLoop = () => setTimeout(async () => {
     try { await metricsJob(); } catch (e) { console.error("[metrics] hata", (e as Error).message); }
     metricsLoop();

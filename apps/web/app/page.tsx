@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArticleListItem, BreakingBar, GazetteList, HeroArticle, MacroCalendar } from "@kaynak/ui";
+import { ArticleListItem, BreakingBar, GazetteList, HeroArticle, MacroCalendar, MarketTicker } from "@kaynak/ui";
 import { Ad } from "@/components/Ad";
 import { KapFeedLive } from "@/components/KapFeedLive";
 import { SOURCE_LABELS } from "@/lib/format";
-import { breakingArticle, calendarUpcoming, gazetteForDate, kapFeed, latestArticles, latestGazetteDate } from "@/lib/queries";
+import { breakingArticle, calendarUpcoming, gazetteForDate, kapFeed, latestArticles, latestGazetteDate, marketTicker } from "@/lib/queries";
 import { dateLabel, todayIso } from "@/lib/format";
 
 export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
@@ -11,7 +11,7 @@ export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
 const NextLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => <Link href={href} className={className}>{children}</Link>;
 
 export default async function HomePage() {
-  const [items, latestDate, feed, calendar, breaking] = await Promise.all([latestArticles(24), latestGazetteDate(), kapFeed(12), calendarUpcoming(30, 40), breakingArticle()]);
+  const [items, latestDate, feed, calendar, breaking, ticker] = await Promise.all([latestArticles(24), latestGazetteDate(), kapFeed(12), calendarUpcoming(30, 40), breakingArticle(), marketTicker()]);
   const gazDate = latestDate ?? todayIso();
   const gazette = await gazetteForDate(gazDate);
   const [hero, ...rest] = items;
@@ -20,6 +20,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <MarketTicker items={ticker} />
       {breaking && <BreakingBar text={breaking.title} href={`/haber/${breaking.slug}`} />}
       <Ad id="home-top" />
       <div className="k-grid k-grid--main">

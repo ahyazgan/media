@@ -36,6 +36,13 @@
       "when": 1790498084139,
       "tag": "0004_ads_distribution_vitals",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790500878955,
+      "tag": "0005_market_quotes",
+      "breakpoints": true
     }
   ]
 }

@@ -16,3 +16,4 @@ export { computeDailyMetrics, persistDailyMetrics, dashboardCounts, type DailyMe
 export { recordFailure, retryFailure } from "./failures.js";
 export { postArticleToX, composeTweet, xConfigured, xPostedToday, X_API } from "./x.js";
 export { authorizationHeader, signatureBase, percentEncode } from "./oauth1.js";
+export { syncMarketQuotes, tickerItems, upsertQuotes, latestQuoteDate, type TickerItem } from "./market.js";

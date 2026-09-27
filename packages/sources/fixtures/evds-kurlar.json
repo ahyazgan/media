@@ -1,0 +1,7 @@
+{"totalCount":5,"items":[
+ {"Tarih":"22-09-2026","TP_DK_USD_A":"41.1520","TP_DK_EUR_A":"48.3010","TP_DK_GBP_A":"55.9120","UNIXTIME":{"$numberLong":"1789938000"}},
+ {"Tarih":"23-09-2026","TP_DK_USD_A":"41.2005","TP_DK_EUR_A":"48.3550","TP_DK_GBP_A":"55.9800","UNIXTIME":{"$numberLong":"1790024400"}},
+ {"Tarih":"24-09-2026","TP_DK_USD_A":"41.2410","TP_DK_EUR_A":"48.2900","TP_DK_GBP_A":"56.0100","UNIXTIME":{"$numberLong":"1790110800"}},
+ {"Tarih":"25-09-2026","TP_DK_USD_A":"41.3125","TP_DK_EUR_A":"48.4100","TP_DK_GBP_A":"56.1300","UNIXTIME":{"$numberLong":"1790197200"}},
+ {"Tarih":"26-09-2026","TP_DK_USD_A":null,"TP_DK_EUR_A":null,"TP_DK_GBP_A":null,"UNIXTIME":{"$numberLong":"1790283600"}}
+]}

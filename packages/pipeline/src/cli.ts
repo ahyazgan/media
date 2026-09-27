@@ -10,6 +10,7 @@
  *   pnpm pipeline:run -- --source spk|bddk|epdk|botas     # liste adapter'ları (canlı; fixture yok)
  *   pnpm pipeline:run -- --calendar [--fixture]     # TCMB/TÜİK takvimini calendar_events'e senkronla
  *   pnpm pipeline:run -- --bulletin [--dry]         # sabah bültenini gönder (--dry: yalnızca konsola yaz)
+ *   pnpm pipeline:run -- --market                   # EVDS kurlarını market_quotes'a çek (EVDS_API_KEY gerekir)
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";
@@ -27,6 +28,7 @@ import { syncCalendar } from "./calendar.js";
 import { createMailer } from "./mail.js";
 import { composeBulletin, renderBulletin, sendBulletin, sponsorFromEnv } from "./newsletter.js";
 import { createPushSender } from "./push.js";
+import { syncMarketQuotes } from "./market.js";
 
 const args = new Map<string, string>();
 for (let i = 2; i < process.argv.length; i++) {
@@ -54,6 +56,13 @@ if (args.get("calendar") === "true") {
   }
   const n = await syncCalendar(handle.db, entries);
   log("calendar", { parsed: entries.length, inserted: n });
+  await handle.close();
+  process.exit(0);
+}
+
+// --- Piyasa şeridi ---
+if (args.get("market") === "true") {
+  log("market", await syncMarketQuotes(handle.db, env.EVDS_API_KEY));
   await handle.close();
   process.exit(0);
 }

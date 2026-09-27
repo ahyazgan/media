@@ -38,7 +38,8 @@ pnpm db:generate                          # şema değişince migration üret (p
   geçmeden merge edilmez. Belgede geçmeyen sayı → reddedilir (`numericGroundingCheck`).
 - Hard delete yok: `articles`/`article_versions` silinmez; düzeltme ve geri çekme sürüm olarak saklanır.
 - Model kimlikleri `.env`'den (`MODEL_CLASSIFY`, `MODEL_WRITE`); kodda sabitleme.
-- Herkese açık POST uçlarında `lib/rateLimit.ts` ve KVCK rıza kontrolü; kullanıcı girdisi Markdown'a giderse `lib/markdown.ts` (HTML kaçışı).
+- Herkese açık POST uçlarında `lib/rateLimit.ts` ve KVKK rıza kontrolü; kullanıcı girdisi Markdown'a giderse `lib/markdown.ts` (HTML kaçışı).
+- CSP `middleware.ts`'te (Report-Only varsayılan). Yeni bir dış kaynak (script/iframe/connect) eklerken listeye alın; nonce kullanmayın (ISR bozulur).
 - Reklam: slot boyutları sabit (CLS), "Reklam"/"Sponsorlu" etiketi, rıza öncesi script yok, kayan kutu/otomatik video yok.
 - Kaynak adresleri kurumlarca taşınabilir: adapter'lar hoşgörülü ayrıştırır, adresler `.env` ile ezilir; canlı doğrulama `docs/YAYINA-HAZIRLIK.md`.
 - Türkçe: kod yorumları ve arayüz metinleri Türkçe; tanımlayıcılar İngilizce.

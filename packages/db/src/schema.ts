@@ -213,6 +213,15 @@ export const webVitals = pgTable("web_vitals", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("web_vitals_name_created").on(t.name, t.createdAt)]);
 
+/** Piyasa şeridi verisi: TCMB EVDS günlük kurlar (resmi kaynak). (series, date) tekil; worker piyasa saatlerinde 30 dk'da bir çeker. */
+export const marketQuotes = pgTable("market_quotes", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  series: text("series").notNull(),      // TP.DK.USD.A gibi EVDS seri kodu
+  date: date("date").notNull(),
+  value: real("value").notNull(),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("market_quotes_unique").on(t.series, t.date), index("market_quotes_series_date").on(t.series, t.date)]);
+
 export const metricsDaily = pgTable("metrics_daily", {
   date: date("date").primaryKey(),
   timeToPublishP50: real("time_to_publish_p50"),
@@ -246,4 +255,5 @@ export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type AdInquiry = typeof adInquiries.$inferSelect;
 export type DistributionLogRow = typeof distributionLog.$inferSelect;
 export type WebVital = typeof webVitals.$inferSelect;
+export type MarketQuote = typeof marketQuotes.$inferSelect;
 export type CompanyEvent = typeof companyEvents.$inferSelect;
