@@ -18,13 +18,14 @@ export function MarketTicker({ items = [] }: { items?: { symbol: string; value: 
   );
 }
 
+/** Son dakika barı: ana sayfada son saatlerde yayınlanmış importance ≥ 5 haber (apps/web `breakingArticle`). */
 export function BreakingBar({ text, href }: { text?: string; href?: string }) {
   if (!text) return null;
   return (
     <div className="k-breaking" role="status">
       <span className="k-breaking__tag">Son dakika</span>
       <a href={href}>{text}</a>
-      <style>{`.k-breaking{display:flex;gap:12px;align-items:center;padding:10px var(--gutter);background:var(--accent);color:#fff;font-weight:600;font-size:15px}.k-breaking__tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#fff;color:var(--accent);padding:2px 6px;border-radius:3px}.k-breaking a{color:#fff}`}</style>
+      <style>{`.k-breaking{display:flex;gap:12px;align-items:center;padding:10px 14px;margin:0 0 8px;border-radius:var(--radius);background:var(--accent);color:#fff;font-weight:600;font-size:15px}.k-breaking__tag{flex:none;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#fff;color:var(--accent);padding:2px 6px;border-radius:3px}.k-breaking a{color:#fff}`}</style>
     </div>
   );
 }

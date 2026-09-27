@@ -8,10 +8,10 @@ import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
 import { eq } from "drizzle-orm";
 import { rawEvents, sources } from "@kaynak/db";
-import { importCalendars, KapAdapter, ResmiGazeteAdapter, TcmbAdapter, TuikAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
+import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import {
-  createMailer, createPushSender, DiskStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
+  createMailer, createPushSender, createStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
   msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, type PipelineDeps,
 } from "@kaynak/pipeline";
 
@@ -21,7 +21,10 @@ await handle.migrate();
 await seed(handle.db);
 const log = (m: string, meta?: Record<string, unknown>) => console.log(new Date().toISOString(), `[${m}]`, JSON.stringify(meta ?? {}));
 
-const registry: SourceAdapter[] = [new ResmiGazeteAdapter(), new KapAdapter(), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ feedUrl: env.TUIK_FEED_URL })];
+const registry: SourceAdapter[] = [
+  new ResmiGazeteAdapter(), new KapAdapter(), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ feedUrl: env.TUIK_FEED_URL }),
+  new SpkAdapter(), new BddkAdapter(), new EpdkAdapter(), new BotasAdapter(),
+];
 const enabledIds = new Set((await handle.db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((r) => r.id));
 const adapters = registry.filter((a) => enabledIds.has(a.id));
 const byId = new Map(registry.map((a) => [a.id, a]));
@@ -30,7 +33,7 @@ if (!hasApiKey()) console.warn("[worker] ANTHROPIC_API_KEY yok → sahte ajanlar
 
 const push = await createPushSender(env);
 const deps: PipelineDeps = {
-  db: handle.db, agents: hasApiKey() ? liveAgents : fakeAgents, store: new DiskStore(env.STORAGE_DIR),
+  db: handle.db, agents: hasApiKey() ? liveAgents : fakeAgents, store: await createStore(env),
   reviewThreshold: env.REVIEW_THRESHOLD, sourceNames: SOURCE_NAMES, log,
   onPublished: makeOnPublished(env, { db: handle.db, push, log }),
 };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { marked } from "marked";
+import { renderArticleMarkdown } from "@/lib/markdown";
 import { ArticleListItem, CompanyCard, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
 import { Ad } from "@/components/Ad";
 import { articleBySlug, companiesByCodes, relatedArticles } from "@/lib/queries";
@@ -31,7 +31,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!r) notFound();
   const { article: a, document: doc, event: ev, versions } = r;
   const [related, cos] = await Promise.all([relatedArticles(a), companiesByCodes(a.tickers)]);
-  const html = await marked.parse(a.bodyMarkdown, { async: true });
+  const html = renderArticleMarkdown(a.bodyMarkdown);
   const paragraphs = html.split(/(?<=<\/p>)/);
   const before = paragraphs.slice(0, 3).join(""), after = paragraphs.slice(3).join("");
   const payload = (ev?.payload ?? {}) as { issueDate?: string; issueNo?: number; index?: number; sectionLabel?: string };

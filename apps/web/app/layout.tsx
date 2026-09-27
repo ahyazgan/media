@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p className="k-footer__disclaimer"><b>Yatırım tavsiyesi değildir.</b> Kaynak'taki haberler resmi belgelerden otomatik üretilir ve editör kurallarından geçer; yorum, tahmin veya öneri içermez.</p>
             <nav className="k-footer__nav">
               <Link href="/kunye">Künye</Link><Link href="/iletisim">İletişim</Link><Link href="/duzeltme-politikasi">Düzeltme politikası</Link>
-              <Link href="/kvkk">KVKK</Link><Link href="/cerez-politikasi">Çerez politikası</Link><Link href="/reklam">Reklam</Link><Link href="/bulten">Sabah bülteni</Link><Link href="/rss.xml">RSS</Link>
+              <Link href="/kvkk">KVKK</Link><Link href="/cerez-politikasi">Çerez politikası</Link><Link href="/reklam">Reklam</Link><Link href="/bulten">Sabah bülteni</Link><Link href="/bildirimler">Bildirimler</Link><Link href="/rss.xml">RSS</Link>
             </nav>
             <p className="k-muted" style={{ fontSize: 12 }}>© {new Date().getFullYear()} Kaynak. Resmi Gazete metinleri FSEK m.31 gereği telif korumasında değildir.</p>
           </div>

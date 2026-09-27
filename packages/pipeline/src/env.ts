@@ -25,6 +25,10 @@ const Env = z.object({
   MAIL_FROM: z.string().default("Kaynak <bulten@example.com>"),
   MAIL_DIR: z.string().default("./storage/mail"),
   BULLETIN_TIME: z.string().regex(/^\d{2}:\d{2}$/).default("07:30"),
+  // Bülten sponsorluğu ("Sponsorlu" etiketli üst blok); üçü de doluysa gösterilir
+  BULLETIN_SPONSOR_NAME: z.string().optional(),
+  BULLETIN_SPONSOR_TEXT: z.string().optional(),
+  BULLETIN_SPONSOR_URL: z.string().url().optional(),
   // Faz 5 — X paylaşımı (yalnızca resmi hesap; günde en fazla 30)
   X_CONSUMER_KEY: z.string().optional(),
   X_CONSUMER_SECRET: z.string().optional(),
@@ -39,6 +43,10 @@ const Env = z.object({
   STORAGE_DIR: z.string().default("./storage"),
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY: z.string().optional(),
+  S3_SECRET_KEY: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_PREFIX: z.string().optional(),
 });
 export type Env = z.infer<typeof Env>;
 

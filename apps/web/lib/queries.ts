@@ -210,3 +210,12 @@ export async function searchArticles(q: string, limit = 30): Promise<Article[]> 
     .where(and(live(), or(ilike(articles.title, like), ilike(articles.dek, like))))
     .orderBy(desc(articles.publishedAt)).limit(limit);
 }
+
+/** Son dakika (ana sayfa barı): son `hours` saat içinde yayınlanmış en yeni importance ≥ 5 haber. */
+export async function breakingArticle(hours = 3): Promise<Article | null> {
+  const { db } = await getDb();
+  const [a] = await db.select().from(articles)
+    .where(and(live(), gte(articles.importance, 5), gte(articles.publishedAt, new Date(Date.now() - hours * 3_600_000))))
+    .orderBy(desc(articles.publishedAt)).limit(1);
+  return a ?? null;
+}

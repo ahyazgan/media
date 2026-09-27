@@ -1,0 +1,53 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck · lint · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  build-e2e:
+    name: build · e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check
+    env:
+      DATABASE_URL: pglite://./data/kaynak
+      SITE_URL: http://localhost:3100
+      REVALIDATE_SECRET: ci-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # Örnek veri: fixture pipeline'ları (ağ ve API anahtarı gerekmez)
+      - run: pnpm pipeline:run -- --fixture
+      - run: pnpm pipeline:run -- --source kap --fixture
+      - run: pnpm pipeline:run -- --calendar --fixture
+      - run: pnpm --filter @kaynak/web build
+      - run: pnpm --filter @kaynak/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @kaynak/web e2e
+        env: { CI: "1" }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: apps/web/test-results, retention-days: 7 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { adInquiries } from "@kaynak/db";
 import { getDb } from "@/lib/db";
 import { notifySales } from "@/lib/mail";
@@ -8,6 +9,8 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Doğrudan satış formu → ad_inquiries; AD_SALES_EMAIL tanımlıysa e-posta bildirimi. */
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "reklam", 5);
+  if (limited) return limited;
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   if (typeof b.website === "string" && b.website) return NextResponse.json({ ok: true }); // bot tuzağı
   const company = String(b.company ?? "").trim().slice(0, 160);

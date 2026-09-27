@@ -48,8 +48,10 @@ export async function composeBulletin(db: Db, opts: { now?: Date } = {}): Promis
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const clock = (d: Date) => new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(d);
 
-/** HTML + düz metin gövde. `unsubscribeUrl` boş verilirse iptal satırı eklenmez (önizleme). */
-export function renderBulletin(data: BulletinData, siteUrl: string, unsubscribeUrl?: string): { subject: string; html: string; text: string } {
+export interface BulletinSponsor { name: string; text: string; url: string }
+
+/** HTML + düz metin gövde. `unsubscribeUrl` boş verilirse iptal satırı eklenmez (önizleme). Sponsor bloğu "Sponsorlu" etiketiyle en üstte. */
+export function renderBulletin(data: BulletinData, siteUrl: string, unsubscribeUrl?: string, sponsor?: BulletinSponsor): { subject: string; html: string; text: string } {
   const subject = `Kaynak sabah bülteni · ${data.dateLabel}`;
   const link = (path: string) => `${siteUrl}${path}`;
   const h: string[] = [];
@@ -57,6 +59,10 @@ export function renderBulletin(data: BulletinData, siteUrl: string, unsubscribeU
   h.push(`<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:0 auto;color:#1A1826;line-height:1.5">`);
   h.push(`<h1 style="font-size:24px;margin:0 0 4px">Kaynak<span style="color:#E0187B">.</span> sabah bülteni</h1><p style="margin:0 0 20px;color:#7A7388">${esc(data.dateLabel)} · Resmi kaynaktan, dakikalar içinde, doğrulanmış.</p>`);
   t.push(`KAYNAK SABAH BÜLTENİ — ${data.dateLabel}`, "");
+  if (sponsor && /^https?:\/\//.test(sponsor.url)) {
+    h.push(`<div style="margin:0 0 20px;padding:12px 14px;background:#F6F3F7;border-radius:6px;font-size:14px"><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7A7388">Sponsorlu</span><br><b>${esc(sponsor.name)}</b> — ${esc(sponsor.text)} <a href="${esc(sponsor.url)}" style="color:#E0187B">Ayrıntı →</a></div>`);
+    t.push(`[SPONSORLU] ${sponsor.name} — ${sponsor.text} ${sponsor.url}`, "");
+  }
 
   h.push(`<h2 style="font-size:17px;border-bottom:2px solid #1A1826;padding-bottom:4px">En önemli haberler</h2>`);
   t.push("EN ÖNEMLİ HABERLER");
@@ -95,12 +101,17 @@ export function renderBulletin(data: BulletinData, siteUrl: string, unsubscribeU
 }
 
 /** Onaylı, iptal etmemiş abonelere gönderir; sonuçları döndürür. Gönderim hatası tek aboneyi atlar. */
-export async function sendBulletin(db: Db, mailer: Mailer, env: Pick<Env, "SITE_URL">, opts: { now?: Date; log?: (m: string, meta?: Record<string, unknown>) => void } = {}) {
+export function sponsorFromEnv(env: Partial<Pick<Env, "BULLETIN_SPONSOR_NAME" | "BULLETIN_SPONSOR_TEXT" | "BULLETIN_SPONSOR_URL">>): BulletinSponsor | undefined {
+  return env.BULLETIN_SPONSOR_NAME && env.BULLETIN_SPONSOR_TEXT && env.BULLETIN_SPONSOR_URL ? { name: env.BULLETIN_SPONSOR_NAME, text: env.BULLETIN_SPONSOR_TEXT, url: env.BULLETIN_SPONSOR_URL } : undefined;
+}
+
+export async function sendBulletin(db: Db, mailer: Mailer, env: Pick<Env, "SITE_URL"> & Partial<Pick<Env, "BULLETIN_SPONSOR_NAME" | "BULLETIN_SPONSOR_TEXT" | "BULLETIN_SPONSOR_URL">>, opts: { now?: Date; log?: (m: string, meta?: Record<string, unknown>) => void } = {}) {
   const data = await composeBulletin(db, { now: opts.now });
+  const sponsor = sponsorFromEnv(env);
   const subs = await db.select().from(newsletterSubscribers).where(and(isNotNull(newsletterSubscribers.confirmedAt), isNull(newsletterSubscribers.unsubscribedAt)));
   let sent = 0, failed = 0;
   for (const s of subs) {
-    const { subject, html, text } = renderBulletin(data, env.SITE_URL, `${env.SITE_URL}/api/bulten/iptal?token=${s.token}`);
+    const { subject, html, text } = renderBulletin(data, env.SITE_URL, `${env.SITE_URL}/api/bulten/iptal?token=${s.token}`, sponsor);
     try {
       await mailer.send({ to: s.email, subject, html, text, headers: { "List-Unsubscribe": `<${env.SITE_URL}/api/bulten/iptal?token=${s.token}>` } });
       await db.update(newsletterSubscribers).set({ lastSentAt: new Date() }).where(eq(newsletterSubscribers.id, s.id));

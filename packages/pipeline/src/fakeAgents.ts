@@ -29,6 +29,14 @@ export const fakeAgents: Agents = {
         isNews: true, summaryHint: "Sahte ajan: makro veri.",
       };
     }
+    const LISTING: Record<string, "borsa" | "bankacilik" | "enerji"> = { spk: "borsa", bddk: "bankacilik", epdk: "enerji", botas: "enerji" };
+    if (LISTING[sourceId]) {
+      return {
+        category: LISTING[sourceId]!, importance: /tarife|faiz|kurul karar|bülten/.test(t) ? 3 : 2,
+        entities: { companies: [], tickers: [], institutions: [sourceId.toUpperCase()] },
+        isNews: !/ihale|personel|sınav|iletişim/.test(t), summaryHint: "Sahte ajan: kurum duyurusu.",
+      };
+    }
     const isUni = /üniversite/.test(t);
     return {
       category: "mevzuat", importance: isUni ? 2 : 3,
@@ -49,7 +57,7 @@ export const fakeAgents: Agents = {
       dek: picked[1] ?? firstQuote,
       bodyMarkdown,
       keyFacts: [{ text: firstQuote, quoteFromSource: firstQuote }],
-      tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : sourceId === "tcmb" || sourceId === "tuik" ? [sourceId, "makro"] : ["resmi-gazete", "mevzuat"],
+      tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : sourceId === "tcmb" || sourceId === "tuik" ? [sourceId, "makro"] : ["spk", "bddk", "epdk", "botas"].includes(sourceId) ? [sourceId, "duyuru"] : ["resmi-gazete", "mevzuat"],
       numbersUsed: extractNumbers(bodyMarkdown),
     };
   },

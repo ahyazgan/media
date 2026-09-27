@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { webVitals } from "@kaynak/db";
 import { getDb } from "@/lib/db";
 
@@ -6,6 +7,8 @@ const NAMES = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 const RATINGS = new Set(["good", "needs-improvement", "poor"]);
 
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "vitals", 60);
+  if (limited) return limited;
   const text = await req.text();
   if (text.length > 1024) return NextResponse.json({ ok: false }, { status: 413 });
   let b: { name?: unknown; value?: unknown; rating?: unknown; path?: unknown; mobile?: unknown } = {};

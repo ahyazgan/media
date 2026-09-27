@@ -16,6 +16,11 @@ export const SEED_SOURCES: (typeof sources.$inferInsert)[] = [
   { id: "kap", name: "Kamuyu Aydınlatma Platformu", official: true, baseUrl: "https://www.kap.org.tr", scheduleCron: "market */60s; else */5m", enabled: false },
   { id: "tcmb", name: "Türkiye Cumhuriyet Merkez Bankası", official: true, baseUrl: "https://www.tcmb.gov.tr", scheduleCron: "calendar */30s; else */10m", enabled: false },
   { id: "tuik", name: "Türkiye İstatistik Kurumu", official: true, baseUrl: "https://data.tuik.gov.tr", scheduleCron: "calendar */30s; else */15m", enabled: false },
+  // Faz 4+ (şartname §4): liste adapter'ları; adresler canlıda doğrulanınca `--enable` ile açılır.
+  { id: "spk", name: "Sermaye Piyasası Kurulu", official: true, baseUrl: "https://spk.gov.tr", scheduleCron: "fri 17:00-20:00 */5m; else */6h", enabled: false },
+  { id: "bddk", name: "Bankacılık Düzenleme ve Denetleme Kurumu", official: true, baseUrl: "https://www.bddk.org.tr", scheduleCron: "weekdays 08:00-19:00 */15m; else */1h", enabled: false },
+  { id: "epdk", name: "Enerji Piyasası Düzenleme Kurumu", official: true, baseUrl: "https://www.epdk.gov.tr", scheduleCron: "weekdays 08:00-19:00 */15m; else */1h", enabled: false },
+  { id: "botas", name: "BOTAŞ", official: true, baseUrl: "https://www.botas.gov.tr", scheduleCron: "weekdays 08:00-19:00 */15m; else */1h", enabled: false },
 ];
 
 export async function seed(db: Awaited<ReturnType<typeof createDb>>["db"]) {

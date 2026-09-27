@@ -7,6 +7,7 @@
  *   pnpm pipeline:run -- --source kap               # KAP: son bildirimleri çek ve işle (--since ile pencere)
  *   pnpm pipeline:run -- --source kap --fixture     # KAP kuru çalıştırma (sentetik fixture)
  *   pnpm pipeline:run -- --source tcmb|tuik [--fixture]   # TCMB/TÜİK beslemesi
+ *   pnpm pipeline:run -- --source spk|bddk|epdk|botas     # liste adapter'ları (canlı; fixture yok)
  *   pnpm pipeline:run -- --calendar [--fixture]     # TCMB/TÜİK takvimini calendar_events'e senkronla
  *   pnpm pipeline:run -- --bulletin [--dry]         # sabah bültenini gönder (--dry: yalnızca konsola yaz)
  */
@@ -14,17 +15,17 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
-import { importCalendars, KapAdapter, parseTcmbCalendar, parseTuikCalendar, ResmiGazeteAdapter, TcmbAdapter, TuikAdapter, type RawEvent, type SourceAdapter } from "@kaynak/sources";
+import { importCalendars, KapAdapter, listingAdapterFor, parseTcmbCalendar, parseTuikCalendar, ResmiGazeteAdapter, TcmbAdapter, TuikAdapter, type RawEvent, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import { loadEnv } from "./env.js";
-import { DiskStore } from "./storage.js";
+import { createStore } from "./storage.js";
 import { ingestEvents, processPending, SOURCE_NAMES, type Agents } from "./pipeline.js";
 import { makeOnPublished } from "./publish.js";
 import { liveAgents } from "./liveAgents.js";
 import { fakeAgents } from "./fakeAgents.js";
 import { syncCalendar } from "./calendar.js";
 import { createMailer } from "./mail.js";
-import { composeBulletin, renderBulletin, sendBulletin } from "./newsletter.js";
+import { composeBulletin, renderBulletin, sendBulletin, sponsorFromEnv } from "./newsletter.js";
 import { createPushSender } from "./push.js";
 
 const args = new Map<string, string>();
@@ -61,7 +62,7 @@ if (args.get("calendar") === "true") {
 if (args.get("bulletin") === "true") {
   if (args.get("dry") === "true") {
     const data = await composeBulletin(handle.db);
-    const { subject, text } = renderBulletin(data, env.SITE_URL);
+    const { subject, text } = renderBulletin(data, env.SITE_URL, undefined, sponsorFromEnv(env));
     console.log(subject + "\n\n" + text);
   } else {
     const mailer = await createMailer(env);
@@ -106,6 +107,10 @@ if (source === "kap") {
     adapter = a;
     events = await a.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
   }
+} else if (listingAdapterFor(source)) {
+  adapter = listingAdapterFor(source)!;
+  if (args.get("fixture") === "true") { console.error(`${source} için fixture modu yok (canlı liste gerekir)`); process.exit(1); }
+  events = await adapter.fetchNew(since ? new Date(since) : new Date(Date.now() - 7 * 86_400_000));
 } else if (source === "resmi-gazete") {
   const rg = new ResmiGazeteAdapter();
   if (args.get("fixture") === "true") {
@@ -119,14 +124,14 @@ if (source === "kap") {
     else events = await rg.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
   }
 } else {
-  console.error(`bilinmeyen kaynak: ${source} (resmi-gazete | kap | tcmb | tuik)`);
+  console.error(`bilinmeyen kaynak: ${source} (resmi-gazete | kap | tcmb | tuik | spk | bddk | epdk | botas)`);
   process.exit(1);
 }
 
 const inserted = await ingestEvents(handle.db, events);
 console.log(`[cli] ${events.length} event, ${inserted.length} yeni`);
 const outcomes = await processPending({
-  db: handle.db, agents, store: new DiskStore(env.STORAGE_DIR), reviewThreshold: env.REVIEW_THRESHOLD,
+  db: handle.db, agents, store: await createStore(env), reviewThreshold: env.REVIEW_THRESHOLD,
   sourceNames: SOURCE_NAMES,
   log,
   onPublished: makeOnPublished(env, { db: handle.db, push: await createPushSender(env), log }),

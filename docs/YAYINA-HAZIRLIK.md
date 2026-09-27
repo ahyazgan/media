@@ -17,7 +17,7 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 - [ ] **X:** Developer Portal'da uygulama (Read and Write), resmi hesap için `X_CONSUMER_KEY/SECRET`, `X_ACCESS_TOKEN/SECRET`; `X_MAX_PER_DAY≤30`.
 - [ ] **IndexNow:** rastgele 32+ karakter `INDEXNOW_KEY`; `/<key>.txt` yanıt veriyor mu kontrol edin.
 - [ ] **EVDS:** `EVDS_API_KEY` (TCMB veri servisleri; ileride veri kartları için).
-- [ ] **Belge deposu:** `S3_*` (MinIO/S3) — şu an belgeler `STORAGE_DIR` altında disktedir; S3 sürücüsü eklenmedi (bkz. Kalan geliştirmeler).
+- [ ] **Belge deposu:** `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (+ MinIO için `S3_ENDPOINT`) → belgeler S3'e yazılır; boşsa `STORAGE_DIR`.
 
 ## 2. Kaynak erişimi (geliştirme ortamından doğrulanamayanlar)
 
@@ -26,6 +26,8 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
       çıktısındaki alan adlarını `packages/sources/src/kap/parse.ts` ile karşılaştırın; sonra `pnpm db:seed -- --enable kap`.
 - [ ] **TCMB / TÜİK:** besleme ve takvim adreslerini canlıda doğrulayın (`--source tcmb`, `--source tuik`, `--calendar`); değiştiyse
       `TCMB_FEED_URL`, `TUIK_FEED_URL`, `TCMB_CALENDAR_URL`, `TUIK_CALENDAR_URL`. `pnpm db:seed -- --enable tcmb` / `tuik`.
+- [ ] **SPK / BDDK / EPDK / BOTAŞ:** liste adresleri canlıda doğrulanmalı (`--source spk` vb.); sonra `--enable`. Bu kaynaklar için altın örnek
+      yok; gerçek belgelerle en az 5'er örnek ekleyip `SOURCES` listesine alın (`packages/agents/test/golden.test.ts`).
 - [ ] **Altın örnekler:** `packages/agents/fixtures/{kap,tcmb,tuik}` sentetiktir; gerçek belgelerle değiştirip `LIVE=1 pnpm test:agents` koşun.
       Prompt değişikliği bu test geçmeden merge edilmez.
 - [ ] **İnsan onayı eşiği:** `REVIEW_THRESHOLD=4` ile başlayın; ilk haftalarda inceleme kuyruğunu günlük boşaltın, güven kazandıkça 5'e çekin.
@@ -54,14 +56,13 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 
 ## 6. Kalan geliştirmeler (şartname MVP dışı / sonraki fazlar)
 
-- [ ] **S3/MinIO belge sürücüsü** (`BlobStore` arayüzü hazır; `DiskStore` var).
-- [ ] **SPK haftalık bülten** adapter'ı (PDF; Cuma 17:00–20:00 5 dk).
-- [ ] **BDDK / EPDK / BOTAŞ** duyuru adapter'ları (15 dk).
+- [x] S3/MinIO belge sürücüsü, SPK/BDDK/EPDK/BOTAŞ liste adapter'ları, son dakika barı, push tercih sayfası, bülten sponsor slotu,
+      güvenlik sertleştirme, e2e testleri ve CI — eklendi.
 - [ ] **Şirket finansal tablo özetleri** (KAP FR bildirimlerinden tablo çıkarımı).
 - [ ] **Muhabir X/Telegram kaynakları** (resmi değil → her zaman review, iki bağımsız kaynak şartı; `official:false` yolu pipeline'da hazır).
 - [ ] **Kullanıcı hesapları ve kişiselleştirme** (şirket takibi, kategori tercihi).
-- [ ] **Piyasa şeridi / son dakika barı** verisi (`MarketTicker`, `BreakingBar` bileşenleri hazır, veri kaynağı yok).
-- [ ] **Bülten sponsorluğu ve kategori sponsorluğu** ("Sponsorlu" etiketi bileşende hazır; bülten şablonuna slot eklenmeli).
-- [ ] **Push kategorileri için kullanıcı tercih sayfası** (şu an yalnızca ilk izin anında seçilir).
+- [ ] **Piyasa şeridi** verisi (`MarketTicker` hazır; resmi kaynak olarak TCMB EVDS kurları bağlanabilir, BIST100 için lisanslı veri gerekir).
+- [ ] **Kategori sponsorluğu** (bülten sponsorluğu eklendi; kategori sayfası için slot yok).
 - [ ] **Search Console API ile index'e girme süresi** ölçütü (§11'de listelenir; API bağlantısı yok).
-- [ ] **Storybook yerine `/_dev/ui`** yeterli; görsel regresyon testi eklenebilir (Playwright ekran görüntüsü karşılaştırma).
+- [ ] **Görsel regresyon** (`pnpm e2e` duman testleri var; ekran görüntüsü karşılaştırması eklenebilir).
+- [ ] **CSP** (nonce'lu Content-Security-Policy; reklam ağı alan adlarıyla birlikte ters vekilde).

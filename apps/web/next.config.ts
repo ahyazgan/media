@@ -29,6 +29,14 @@ const config: NextConfig = {
   // IndexNow anahtar dosyası: /<key>.txt (public/ dosyaları önceliklidir; robots.txt etkilenmez)
   rewrites: async () => [{ source: "/:key([A-Za-z0-9-]{8,128}).txt", destination: "/api/indexnow?key=:key" }],
   headers: async () => [
+    // Güvenlik başlıkları (CSP reklam ağı kaynakları yüzünden bilinçli olarak eklenmedi; ters vekilde nonce'lu CSP önerilir)
+    { source: "/:path*", headers: [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+      ...(process.env.NODE_ENV === "production" && (process.env.SITE_URL ?? "").startsWith("https://") ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }] : []),
+    ] },
     { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     { source: "/_dev/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
   ],

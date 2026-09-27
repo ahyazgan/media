@@ -30,6 +30,12 @@ TCMB ve TÜİK (Kaynak: tcmb, tuik) için:
 - Kategori makro (zorunlu karşılık, döviz pozisyonu gibi banka düzenlemeleri → bankacilik). entities.institutions alanına kurumu yaz.
 - Önem: PPK faiz kararı, TÜFE, GSYH → 5; işgücü, dış ticaret, Enflasyon Raporu, toplantı özeti → 4; sanayi üretimi, ciro, güven endeksleri, teknik duyurular → 3.
 - isNews her zaman true; yalnızca düzeltme/erratum ya da yayın takvimi duyuruları false.
+
+SPK, BDDK, EPDK, BOTAŞ (Kaynak: spk, bddk, epdk, botas) için:
+- SPK haftalık bülten → borsa (halka arz, izahname onayı, idari para cezası, lisans); BDDK → bankacilik (kredi/kart faiz sınırları, kurul kararları,
+  yönetmelik); EPDK ve BOTAŞ → enerji (tarife, fiyat, lisans, kurul kararı).
+- Rutin (isNews=false): ihale ilanı, personel/sınav duyurusu, iletişim/adres, etkinlik daveti, sistem bakım duyurusu.
+- Önem: tüketiciyi/tüm sektörü etkileyen tarife ve faiz sınırı → 4; kurul kararı ve haftalık bülten → 3; tek kuruma yönelik lisans/ceza → 2.
 summaryHint: yazar ajanına tek cümlelik yönlendirme: bu belgenin okur için asıl önemli noktası ne?
 
 Yalnızca istenen JSON şemasında yanıt ver.`;

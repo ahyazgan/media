@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { eq } from "drizzle-orm";
 import { pushSubscriptions } from "@kaynak/db";
 import { getDb } from "@/lib/db";
@@ -9,6 +10,8 @@ interface Body { subscription?: { endpoint?: string; keys?: { p256dh?: string; a
 
 /** POST: abonelik kaydı (KVKK açık rıza zorunlu, şartname §10). Aynı endpoint yeniden gelirse kategoriler güncellenir. */
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "push", 20);
+  if (limited) return limited;
   const body = (await req.json().catch(() => ({}))) as Body;
   const sub = body.subscription;
   if (body.consent !== true) return NextResponse.json({ ok: false, error: "Açık rıza gerekli." }, { status: 400 });

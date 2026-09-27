@@ -120,6 +120,20 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 - **Lighthouse (mobil, simüle yavaş 4G, bu ortamda):** performans 96–97, CLS 0, TBT 60–100 ms, FCP 0,7–0,8 s, LCP 2,4–2,8 s (koşular arası
   ±0,2 s oynar; gözlenen gerçek render gecikmesi ~100 ms, sayı Lighthouse'un ağ modelinden gelir). Kabul ölçütü canlı alan verisi (pano) ile izlenir.
 
+## Ek kaynaklar, depo, güvenlik ve testler (Faz 5 sonrası)
+
+- **SPK / BDDK / EPDK / BOTAŞ:** `packages/sources/src/listing/` genel liste adapter'ı; SPK haftalık bülten PDF (Cuma 17:00–20:00 5 dk),
+  diğerleri hafta içi 15 dk. Kapalı gelir; `pnpm db:seed -- --enable spk` (adresler `<ID>_LIST_URL` ile ezilir; canlı doğrulama gerekir,
+  altın örnekleri gerçek belgelerle ekleyin).
+- **S3/MinIO:** `S3_BUCKET` + anahtarlar tanımlıysa belgeler S3'e (`S3_ENDPOINT` ile MinIO path-style), yoksa `storage/`.
+- **Güvenlik:** haber gövdesi Markdown'ı ham HTML'i kaçırır ve yalnızca http(s)/mailto bağlantılarına izin verir; `/api/revalidate` sırrı sabit
+  zamanlı karşılaştırılır; herkese açık POST uçlarında IP başına hız sınırı; `nosniff`, `Referrer-Policy`, `X-Frame-Options`,
+  `Permissions-Policy`, HTTPS'te HSTS. CSP reklam ağı kaynakları nedeniyle ters vekile bırakıldı.
+- **Ürün:** ana sayfada son 3 saatin importance ≥ 5 haberi "Son dakika" barında; `/bildirimler` push kategori tercihleri ve iptal; bülten
+  sponsor bloğu (`BULLETIN_SPONSOR_*`, "Sponsorlu" etiketli).
+- **Testler:** `pnpm test` (vitest, 170 test) + `pnpm e2e` (Playwright: site, PWA/SW, rıza kapısı, admin auth, formlar, güvenlik başlıkları).
+  CI: `.github/workflows/ci.yml` (typecheck · lint · test, sonra fixture verisiyle build + e2e).
+
 ## Bilinen kısıtlar
 
 - **resmigazete.gov.tr TLS zinciri** TÜBİTAK Kamu SM köküne dayanır; Node bunu tanımaz (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Kök sertifikayı indirip `NODE_EXTRA_CA_CERTS` ile verin. Doğrulamayı kapatmayın.

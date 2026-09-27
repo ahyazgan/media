@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { CookieBar, InstallBanner, PushOptIn, Toast } from "@kaynak/ui";
+import { isIos, isStandalone, usePush } from "./usePush";
 
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 const LS = { install: "k-install-dismissed", cookie: "k-cookie", push: "k-push-state" };
@@ -8,14 +9,6 @@ const day = 86_400_000;
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* özel pencere */ } };
 
-const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
-const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-function b64ToU8(b64: string): Uint8Array {
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
 
 /**
  * PWA istemci akışı (şartname §7): çerez barı; kurulum bandı (iOS: adımlar, Android/masaüstü: beforeinstallprompt);
@@ -25,8 +18,8 @@ export function PwaClient() {
   const [cookie, setCookie] = useState<string | null>("pending");
   const [install, setInstall] = useState<"ios" | "prompt" | null>(null);
   const [bip, setBip] = useState<BeforeInstallPromptEvent | null>(null);
-  const [pushAvailable, setPushAvailable] = useState(false);
-  const [vapid, setVapid] = useState<string | null>(null);
+  const push = usePush();
+  const [pushDone, setPushDone] = useState(false);
   const [cats, setCats] = useState<string[]>(["makro", "borsa"]);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,26 +38,17 @@ export function PwaClient() {
     }
   }, []);
 
-  useEffect(() => {
-    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    if (!supported || Notification.permission !== "default" || read(LS.push) === "done") return;
-    if (isIos() && !isStandalone()) return; // iOS'ta push yalnızca ana ekrana eklenmiş PWA'da
-    fetch("/api/push/vapid").then((r) => (r.ok ? r.json() : null)).then((d: { publicKey?: string } | null) => { if (d?.publicKey) { setVapid(d.publicKey); setPushAvailable(true); } }).catch(() => {});
-  }, []);
+  useEffect(() => { setPushDone(read(LS.push) === "done"); }, []);
+  // İlk izin kutusu: push destekleniyor, henüz sorulmamış (iOS'ta yalnızca ana ekrana eklenmiş PWA'da)
+  const pushAvailable = push.state === "off" && !pushDone;
 
   const subscribe = async () => {
-    if (!vapid) return;
     setBusy(true); setErr("");
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") { setErr("Tarayıcı izni verilmedi."); write(LS.push, "done"); setPushAvailable(false); return; }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(vapid) as BufferSource });
-      const res = await fetch("/api/push/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON(), categories: cats, consent }) });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "kayıt başarısız" }))).error);
-      write(LS.push, "done"); setPushAvailable(false); setToast("Bildirimler açık."); setTimeout(() => setToast(""), 4000);
-    } catch (e) { setErr((e as Error).message || "Abonelik başarısız."); }
-    finally { setBusy(false); }
+    const e = await push.subscribe(cats, consent);
+    setBusy(false);
+    if (e) { setErr(e); if (push.state === "blocked") { write(LS.push, "done"); setPushDone(true); } return; }
+    try { localStorage.setItem("k-push-categories", JSON.stringify(cats)); } catch { /* yok */ }
+    write(LS.push, "done"); setPushDone(true); setToast("Bildirimler açık. Tercihler: /bildirimler"); setTimeout(() => setToast(""), 5000);
   };
 
   return (

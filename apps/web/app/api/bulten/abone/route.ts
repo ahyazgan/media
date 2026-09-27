@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { eq } from "drizzle-orm";
 import { newsletterSubscribers } from "@kaynak/db";
 import { getDb } from "@/lib/db";
@@ -8,6 +9,8 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** POST { email, consent } → kayıt (onaysız) + onay e-postası. Var olan adres yeniden onay e-postası alır; iptal etmişse yeniden açılır. */
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "bulten", 5);
+  if (limited) return limited;
   const body = (await req.json().catch(() => ({}))) as { email?: unknown; consent?: unknown };
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (body.consent !== true) return NextResponse.json({ ok: false, error: "KVKK açık rızası gerekli." }, { status: 400 });

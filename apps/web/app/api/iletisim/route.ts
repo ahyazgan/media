@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { correctionRequests } from "@kaynak/db";
 import { getDb } from "@/lib/db";
 
@@ -18,6 +19,8 @@ function slugFrom(v: string): string | null {
 
 /** POST { name, email, kind, article, message, consent, website(honeypot) } → correction_requests; admin "Düzeltme talepleri"nde görünür. */
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "iletisim", 5);
+  if (limited) return limited;
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   if (typeof b.website === "string" && b.website) return NextResponse.json({ ok: true }); // bot tuzağı: sessizce kabul
   const name = String(b.name ?? "").trim().slice(0, 120);

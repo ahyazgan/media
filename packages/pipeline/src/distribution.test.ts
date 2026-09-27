@@ -74,6 +74,10 @@ describe("sabah bülteni", () => {
     expect(r.text).toContain("PPK Toplantısı ve Faiz Kararı");
     expect(r.text).toContain("https://kaynak.test/haber/");
     expect(r.html).not.toContain("<script");
+    const sp = renderBulletin(data, "https://kaynak.test", undefined, { name: "Örnek Banka", text: "KOBİ kredisi kampanyası", url: "https://ornek.example/kobi" });
+    expect(sp.html).toContain("Sponsorlu");
+    expect(sp.text).toContain("[SPONSORLU] Örnek Banka");
+    expect(renderBulletin(data, "https://kaynak.test", undefined, { name: "x", text: "y", url: "javascript:alert(1)" }).html).not.toContain("Sponsorlu");
   });
   it("yalnızca onaylı ve iptal etmemiş abonelere dosya taşıyıcısıyla gönderir", async () => {
     const dir = mkdtempSync(join(tmpdir(), "kaynak-mail-"));

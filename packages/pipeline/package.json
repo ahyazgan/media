@@ -20,6 +20,7 @@
     "run-cli": "tsx src/cli.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
     "@kaynak/agents": "workspace:*",
     "@kaynak/db": "workspace:*",
     "@kaynak/sources": "workspace:*",

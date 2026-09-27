@@ -34,6 +34,10 @@ export const SOURCE_NAMES: Record<string, string> = {
   kap: "Kamuyu Aydınlatma Platformu",
   tcmb: "Türkiye Cumhuriyet Merkez Bankası",
   tuik: "Türkiye İstatistik Kurumu",
+  spk: "Sermaye Piyasası Kurulu",
+  bddk: "Bankacılık Düzenleme ve Denetleme Kurumu",
+  epdk: "Enerji Piyasası Düzenleme Kurumu",
+  botas: "BOTAŞ",
 };
 
 export type Outcome =
