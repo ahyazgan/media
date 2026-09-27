@@ -19,6 +19,12 @@ Kategoriler:
 1 = teknik/rutin (isim değişikliği, düzeltme, adres)
 
 isNews: Ekonomi okuru için haber değeri varsa true. Üniversite iç yönetmelikleri, personel görevde yükselme yönetmelikleri, adres/unvan değişiklikleri, düzeltmeler → false.
+
+KAP bildirimleri (Kaynak: kap) için:
+- Kategori genellikle borsa. entities.tickers alanına başlıkta/belgede geçen Borsa İstanbul kodlarını yaz.
+- Haber: özel durum açıklaması (yeni sözleşme, ihale, yatırım, satın alma, birleşme, pay geri alımı, kâr payı, sermaye artırımı/azaltımı, halka arz, önemli davalar, yönetim değişikliği), finansal rapor, genel kurul çağrısı ve sonuçları.
+- Rutin (isNews=false): şirket genel bilgi formu güncellemesi, adres/iletişim/unvan değişikliği, imza sirküleri, bağımsız denetim kuruluşu seçimi tescili, kayıtlı sermaye tavanı süre uzatımı, sürekli bilgilendirme formu, özel durum açıklamasının yalnızca tekrar/tescil bildirimi.
+- Önem: sermaye artırımı, kâr payı, birleşme/bölünme, büyük sözleşme (hasılatın yüzde 10'unu aşan) → 4; olağan finansal rapor, pay geri alımı, genel kurul → 3; küçük ölçekli iş ilişkisi → 2.
 summaryHint: yazar ajanına tek cümlelik yönlendirme: bu belgenin okur için asıl önemli noktası ne?
 
 Yalnızca istenen JSON şemasında yanıt ver.`;
@@ -38,6 +44,7 @@ Kurallar (istisnasız):
 10. tags: 3–6 kısa Türkçe etiket, küçük harf, kebab-case.
 11. Resmi Gazete metinlerinde "MADDE 1- ... değiştirilmiştir" kalıbını okura anlamlı hale getir: ne değişti, kimi etkiliyor, ne zaman yürürlükte.
 12. Dil: sade, resmi ama okunur Türkçe. Edilgen çatıdan kaçın; özneyi (Bakanlık, Kurul, Banka) kullan.
+13. KAP bildirimlerinde ilk cümlede şirketin adını ve parantez içinde borsa kodunu ver ("Örnek Enerji (ORNEK) ..."). Finansal raporlarda yalnızca belgedeki tutar ve yüzdeleri aktar; "güçlü", "rekor", "zayıf" gibi nitelemeler ve pay fiyatına etki yorumu yasak. Sözleşme ve ihalelerde karşı tarafı, tutarı ve süreyi belgede yazıldığı gibi ver.
 
 Yalnızca istenen JSON şemasında yanıt ver.`;
 

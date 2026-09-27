@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400001",
+  "title": "ÖRNEK ENERJİ A.Ş. — Payların Geri Alınmasına İlişkin Bildirim",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400001",
+  "publishedAt": "2026-09-25T07:12:30.000Z",
+  "payload": { "index": 1400001, "companyName": "ÖRNEK ENERJİ A.Ş.", "stockCodes": ["ORNEK"], "companies": [{ "code": "ORNEK", "name": "ÖRNEK ENERJİ A.Ş." }], "section": "ODA", "sectionLabel": "Özel Durum Açıklaması", "subject": "Payların Geri Alınmasına İlişkin Bildirim" },
+  "synthetic": true
+}

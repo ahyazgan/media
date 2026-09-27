@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { marked } from "marked";
-import { AdSlot, ArticleListItem, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
-import { articleBySlug, relatedArticles } from "@/lib/queries";
-import { dateLabel, dateTimeLabel } from "@/lib/format";
+import { AdSlot, ArticleListItem, CompanyCard, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
+import { articleBySlug, companiesByCodes, relatedArticles } from "@/lib/queries";
+import { dateLabel, dateTimeLabel, sourceLabel } from "@/lib/format";
 
 export const revalidate = 3600; // publish'te /api/revalidate ile anında yenilenir
 
@@ -28,12 +28,18 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const r = await articleBySlug(slug);
   if (!r) notFound();
   const { article: a, document: doc, event: ev } = r;
-  const related = await relatedArticles(a);
+  const [related, cos] = await Promise.all([relatedArticles(a), companiesByCodes(a.tickers)]);
   const html = await marked.parse(a.bodyMarkdown, { async: true });
   const paragraphs = html.split(/(?<=<\/p>)/);
   const before = paragraphs.slice(0, 3).join(""), after = paragraphs.slice(3).join("");
-  const issueDate = (ev?.payload as { issueDate?: string } | undefined)?.issueDate;
-  const issueNo = (ev?.payload as { issueNo?: number } | undefined)?.issueNo;
+  const payload = (ev?.payload ?? {}) as { issueDate?: string; issueNo?: number; index?: number; sectionLabel?: string };
+  const issueDate = payload.issueDate;
+  const issueNo = payload.issueNo;
+  const institution = ev?.sourceId === "resmi-gazete"
+    ? `T.C. Resmî Gazete${issueNo ? ` · Sayı ${issueNo}` : ""}`
+    : ev?.sourceId === "kap"
+      ? `KAP${payload.sectionLabel ? ` · ${payload.sectionLabel}` : ""}${payload.index ? ` · No ${payload.index}` : ""}`
+      : sourceLabel(ev?.sourceId);
 
   const jsonLd = {
     "@context": "https://schema.org", "@type": "NewsArticle",
@@ -42,6 +48,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     publisher: { "@type": "Organization", name: "Kaynak", url: SITE },
     isAccessibleForFree: true, citation: a.sourceUrl, articleSection: categoryLabel(a.category), keywords: a.tags.join(", "),
     mainEntityOfPage: `${SITE}/haber/${a.slug}`,
+    ...(cos.length ? { about: cos.map((c) => ({ "@type": "Organization", name: c.name, tickerSymbol: c.kapCode, url: `${SITE}/sirket/${c.kapCode.toLowerCase()}` })) } : {}),
   };
 
   return (
@@ -62,11 +69,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {after && <AdSlot id="article-inline" size="300x250" mobileSize="336x280" />}
         {after && <div className="k-article__body" dangerouslySetInnerHTML={{ __html: after }} />}
         <SourceBox
-          title={ev?.title ?? "Kaynak belge"} institution={ev?.sourceId === "resmi-gazete" ? `T.C. Resmî Gazete${issueNo ? ` · Sayı ${issueNo}` : ""}` : ev?.sourceId ?? "Resmi kaynak"}
-          dateLabel={issueDate ? dateLabel(issueDate) : a.publishedAt ? dateLabel(a.publishedAt) : ""}
+          title={ev?.title ?? "Kaynak belge"} institution={institution}
+          dateLabel={issueDate ? dateLabel(issueDate) : ev?.publishedAt ? dateTimeLabel(ev.publishedAt) : a.publishedAt ? dateLabel(a.publishedAt) : ""}
           url={a.sourceUrl} excerpt={doc ? doc.textContent.replace(/\s+/g, " ").slice(0, 280) + "…" : undefined}
         />
         <KeyFacts facts={a.keyFacts} />
+        {cos.map((c) => <CompanyCard key={c.kapCode} c={c} LinkComponent={NextLink} />)}
         {related.length > 0 && (
           <section>
             <div className="k-section-h"><h2>İlgili haberler</h2></div>

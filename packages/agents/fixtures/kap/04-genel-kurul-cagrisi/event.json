@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400004",
+  "title": "DEMO HOLDİNG A.Ş. — Genel Kurul İşlemlerine İlişkin Bildirim",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400004",
+  "publishedAt": "2026-09-25T14:55:40.000Z",
+  "payload": { "index": 1400004, "companyName": "DEMO HOLDİNG A.Ş.", "stockCodes": ["DEMHO"], "companies": [{ "code": "DEMHO", "name": "DEMO HOLDİNG A.Ş." }], "section": "DG", "sectionLabel": "Diğer Bildirim", "subject": "Genel Kurul İşlemlerine İlişkin Bildirim" },
+  "synthetic": true
+}

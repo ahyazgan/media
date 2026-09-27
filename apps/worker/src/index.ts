@@ -6,22 +6,26 @@ import "dotenv/config";
 import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
 import { eq } from "drizzle-orm";
-import { rawEvents } from "@kaynak/db";
-import { ResmiGazeteAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
+import { rawEvents, sources } from "@kaynak/db";
+import { KapAdapter, ResmiGazeteAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
-import { DiskStore, fakeAgents, ingestEvents, liveAgents, loadEnv, makeOnPublished, processEvent, type PipelineDeps } from "@kaynak/pipeline";
+import { DiskStore, fakeAgents, ingestEvents, liveAgents, loadEnv, makeOnPublished, processEvent, SOURCE_NAMES, type PipelineDeps } from "@kaynak/pipeline";
 
 const env = loadEnv();
 const handle = await createDb(env.DATABASE_URL);
 await handle.migrate();
 await seed(handle.db);
 
-const adapters: SourceAdapter[] = [new ResmiGazeteAdapter()];
-const byId = new Map(adapters.map((a) => [a.id, a]));
+// Kayıtlı adapter'lar; hangilerinin taranacağına `sources.enabled` karar verir (KAP varsayılan kapalı: `pnpm db:seed -- --enable kap`).
+const registry: SourceAdapter[] = [new ResmiGazeteAdapter(), new KapAdapter()];
+const enabledIds = new Set((await handle.db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((r) => r.id));
+const adapters = registry.filter((a) => enabledIds.has(a.id));
+const byId = new Map(registry.map((a) => [a.id, a]));
+console.log("[worker] kaynaklar:", registry.map((a) => `${a.id}${enabledIds.has(a.id) ? "" : " (kapalı)"}`).join(", "));
 if (!hasApiKey()) console.warn("[worker] ANTHROPIC_API_KEY yok → sahte ajanlar (yayın kalitesi beklenmez)");
 const deps: PipelineDeps = {
   db: handle.db, agents: hasApiKey() ? liveAgents : fakeAgents, store: new DiskStore(env.STORAGE_DIR),
-  reviewThreshold: env.REVIEW_THRESHOLD, sourceNames: { "resmi-gazete": "T.C. Resmî Gazete" },
+  reviewThreshold: env.REVIEW_THRESHOLD, sourceNames: SOURCE_NAMES,
   log: (m, meta) => console.log(new Date().toISOString(), `[${m}]`, JSON.stringify(meta ?? {})),
   onPublished: makeOnPublished(env),
 };

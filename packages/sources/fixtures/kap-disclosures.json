@@ -1,0 +1,148 @@
+[
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000001",
+      "disclosureIndex": 1400006,
+      "publishDate": "25.09.2026 18:42:11",
+      "kapTitle": "MİSAL GIDA SANAYİ VE TİCARET A.Ş.",
+      "disclosureClass": "DG",
+      "disclosureType": "DG",
+      "disclosureCategory": "DG",
+      "ruleTypeTerm": "Şirket Genel Bilgi Formu Güncellemesi",
+      "title": "Diğer Bildirim",
+      "summary": "Şirket merkez adresi ve iletişim bilgileri güncellenmiştir.",
+      "stockCodes": "MISAL",
+      "relatedStocks": "MISAL",
+      "attachmentCount": 0,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000002",
+      "disclosureIndex": 1400005,
+      "publishDate": "25.09.2026 18:31:04",
+      "kapTitle": "ÖRNEK ENERJİ A.Ş.",
+      "disclosureClass": "FR",
+      "disclosureType": "FR",
+      "disclosureCategory": "FR",
+      "ruleTypeTerm": "Finansal Rapor",
+      "title": "Finansal Rapor",
+      "summary": "01.01.2026 - 30.06.2026 dönemine ait konsolide finansal rapor.",
+      "stockCodes": "ORNEK",
+      "relatedStocks": "ORNEK",
+      "year": "2026",
+      "period": "6 Aylık",
+      "attachmentCount": 2,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000003",
+      "disclosureIndex": 1400004,
+      "publishDate": "25.09.2026 17:55:40",
+      "kapTitle": "DEMO HOLDİNG A.Ş.",
+      "disclosureClass": "DG",
+      "disclosureType": "DG",
+      "disclosureCategory": "DG",
+      "ruleTypeTerm": "Genel Kurul İşlemlerine İlişkin Bildirim",
+      "title": "Genel Kurul Toplantısı Çağrısı",
+      "summary": "Olağanüstü genel kurul toplantısı 20.10.2026 tarihinde yapılacaktır.",
+      "stockCodes": "DEMHO",
+      "relatedStocks": "DEMHO",
+      "attachmentCount": 3,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000001",
+      "disclosureIndex": 1400003,
+      "publishDate": "25.09.2026 17:20:15",
+      "kapTitle": "MİSAL GIDA SANAYİ VE TİCARET A.Ş.",
+      "disclosureClass": "ODA",
+      "disclosureType": "OD",
+      "disclosureCategory": "ODA",
+      "ruleTypeTerm": "Sermaye Artırımı - Azaltımı İşlemlerine İlişkin Bildirim",
+      "title": "Özel Durum Açıklaması (Genel)",
+      "summary": "Sermayenin 400.000.000 TL'den 1.000.000.000 TL'ye bedelsiz artırılmasına karar verilmiştir.",
+      "stockCodes": "MISAL",
+      "relatedStocks": "MISAL",
+      "attachmentCount": 1,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000003",
+      "disclosureIndex": 1400002,
+      "publishDate": "25.09.2026 14:05:52",
+      "kapTitle": "DEMO HOLDİNG A.Ş.",
+      "disclosureClass": "ODA",
+      "disclosureType": "OD",
+      "disclosureCategory": "ODA",
+      "ruleTypeTerm": "Yeni İş İlişkisi",
+      "title": "Özel Durum Açıklaması (Genel)",
+      "summary": "Bağlı ortaklık Demo Lojistik A.Ş. ile kamu kurumu arasında 36 aylık hizmet sözleşmesi imzalanmıştır.",
+      "stockCodes": "DEMHO, DEMLJ",
+      "relatedStocks": "DEMHO, DEMLJ",
+      "attachmentCount": 0,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000002",
+      "disclosureIndex": 1400001,
+      "publishDate": "25.09.2026 10:12:30",
+      "kapTitle": "ÖRNEK ENERJİ A.Ş.",
+      "disclosureClass": "ODA",
+      "disclosureType": "OD",
+      "disclosureCategory": "ODA",
+      "ruleTypeTerm": "Payların Geri Alınmasına İlişkin Bildirim",
+      "title": "Özel Durum Açıklaması (Genel)",
+      "summary": "Geri alım programı kapsamında 250.000 adet pay geri alınmıştır.",
+      "stockCodes": "ORNEK",
+      "relatedStocks": "ORNEK",
+      "attachmentCount": 0,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000009",
+      "disclosureIndex": 1400000,
+      "publishDate": "25.09.2026 09:31:00",
+      "kapTitle": "ÖRNEK PORTFÖY BİRİNCİ HİSSE SENEDİ FONU",
+      "disclosureClass": "DUY",
+      "disclosureType": "DUY",
+      "disclosureCategory": "DUY",
+      "ruleTypeTerm": "Fon Sürekli Bilgilendirme Formu",
+      "title": "Duyuru",
+      "summary": "Fon içtüzüğü değişikliği.",
+      "stockCodes": "",
+      "relatedStocks": "",
+      "attachmentCount": 1,
+      "isOldKap": false
+    }
+  },
+  {
+    "basic": {
+      "companyId": "4028e4a1sample000002",
+      "disclosureIndex": 1399990,
+      "publishDate": "24.09.2026 19:02:00",
+      "kapTitle": "ÖRNEK ENERJİ A.Ş.",
+      "disclosureClass": "ODA",
+      "disclosureType": "OD",
+      "disclosureCategory": "ODA",
+      "ruleTypeTerm": "Özel Durum Açıklaması (Genel)",
+      "title": "Özel Durum Açıklaması (Genel)",
+      "summary": "Eski KAP sisteminden taşınan kayıt.",
+      "stockCodes": "ORNEK",
+      "relatedStocks": "ORNEK",
+      "attachmentCount": 0,
+      "isOldKap": true
+    }
+  }
+]

@@ -81,14 +81,18 @@ export const articleVersions = pgTable("article_versions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("article_versions_unique").on(t.articleId, t.version)]);
 
+/** kapCode = Borsa İstanbul kodu (ör. THYAO); `/sirket/[kod]` rotasının anahtarı. Adı KAP unvanıdır. */
 export const companies = pgTable("companies", {
   kapCode: text("kap_code").primaryKey(),
   name: text("name").notNull(),
   sector: text("sector"),
   slug: text("slug").notNull(),
   description: text("description"),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("companies_slug").on(t.slug)]);
 
+/** Şirket bildirim geçmişi: isNews=false olanlar da kaydedilir (şartname §5.1), yalnızca haber olmaz. */
 export const companyEvents = pgTable("company_events", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
   kapCode: text("kap_code").notNull().references(() => companies.kapCode),
@@ -96,7 +100,10 @@ export const companyEvents = pgTable("company_events", {
   articleId: text("article_id").references(() => articles.id),
   isNews: boolean("is_news").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("company_events_unique").on(t.kapCode, t.rawEventId),
+  index("company_events_code_created").on(t.kapCode, t.createdAt),
+]);
 
 export const calendarEvents = pgTable("calendar_events", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -148,3 +155,5 @@ export type NewRawEvent = typeof rawEvents.$inferInsert;
 export type DocumentRow = typeof documents.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type NewArticle = typeof articles.$inferInsert;
+export type Company = typeof companies.$inferSelect;
+export type CompanyEvent = typeof companyEvents.$inferSelect;

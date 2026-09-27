@@ -5,32 +5,40 @@ import { extractNumbers, numericGroundingCheck } from "../src/edit/numericGround
 import { WriteOutput } from "../src/schemas.js";
 import { hasApiKey } from "../src/client.js";
 
-const ROOT = new URL("../fixtures/resmi-gazete/", import.meta.url);
+const FIXTURES = new URL("../fixtures/", import.meta.url);
+const ROOT = new URL("resmi-gazete/", FIXTURES);
+const SOURCES = ["resmi-gazete", "kap"] as const;
 type Expected = {
   classify: { category: string[]; importanceMin?: number; importanceMax?: number; isNews: boolean | null };
   mustGround: string[]; mustNotContain: string[];
 };
-const dirs = readdirSync(ROOT).filter((d) => /^\d\d-/.test(d) && !d.startsWith("99"));
+/** "kaynak/NN-slug" biçiminde tüm örnekler (99-* bozuk örnekler hariç) */
+const dirs = SOURCES.flatMap((src) => readdirSync(new URL(`${src}/`, FIXTURES)).filter((d) => /^\d\d-/.test(d) && !d.startsWith("99")).map((d) => `${src}/${d}`));
 const load = (d: string) => ({
-  doc: readFileSync(new URL(`${d}/document.txt`, ROOT), "utf8"),
-  event: JSON.parse(readFileSync(new URL(`${d}/event.json`, ROOT), "utf8")) as { title: string; url: string; sourceName: string; publishedAt: string; sourceId: string },
-  expected: JSON.parse(readFileSync(new URL(`${d}/expected.json`, ROOT), "utf8")) as Expected,
+  doc: readFileSync(new URL(`${d}/document.txt`, FIXTURES), "utf8"),
+  event: JSON.parse(readFileSync(new URL(`${d}/event.json`, FIXTURES), "utf8")) as { title: string; url: string; sourceName: string; publishedAt: string; sourceId: string },
+  expected: JSON.parse(readFileSync(new URL(`${d}/expected.json`, FIXTURES), "utf8")) as Expected,
 });
 
 describe("altın örnekler — bütünlük (çevrimdışı)", () => {
-  it("en az 5 gerçek belge var", () => expect(dirs.length).toBeGreaterThanOrEqual(5));
+  it.each(SOURCES)("%s: en az 5 belge var", (src) => expect(dirs.filter((d) => d.startsWith(`${src}/`)).length).toBeGreaterThanOrEqual(5));
   it.each(dirs)("%s: mustGround sayıları belgede gerçekten var", (d) => {
     const { doc, expected } = load(d);
     const r = numericGroundingCheck(expected.mustGround, "", doc);
     expect(r.missing).toEqual([]);
     expect(extractNumbers(doc).length).toBeGreaterThan(0);
   });
+  it.each(dirs)("%s: event.json kaynağıyla klasörü tutarlı", (d) => {
+    const { event } = load(d);
+    expect(d.startsWith(`${event.sourceId}/`)).toBe(true);
+    expect(event.url).toMatch(/^https:\/\//);
+  });
 });
 
 describe("altın örnekler — bilerek bozulmuş fixture reddedilir (Faz 1 kabul)", () => {
   const broken = JSON.parse(readFileSync(new URL("99-broken-numbers/article.json", ROOT), "utf8")) as { fixture: string; article: unknown };
   const article = WriteOutput.parse(broken.article);
-  const { doc } = load(broken.fixture);
+  const { doc } = load(`resmi-gazete/${broken.fixture}`);
   it("numericGroundingCheck → reject", () => {
     const r = runEditRules(article, doc, { importance: 3, reviewThreshold: 4 });
     expect(r.decision).toBe("reject");
@@ -47,7 +55,8 @@ describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
     const { classify } = await import("../src/classify.js");
     const { write } = await import("../src/write.js");
     const { doc, event, expected } = load(d);
-    const c = await classify({ sourceId: event.sourceId, title: event.title, textHead: doc.slice(0, 2000) });
+    const section = (JSON.parse(readFileSync(new URL(`${d}/event.json`, FIXTURES), "utf8")) as { payload?: { section?: string } }).payload?.section;
+    const c = await classify({ sourceId: event.sourceId, title: event.title, textHead: doc.slice(0, 2000), section });
     expect(expected.classify.category).toContain(c.category);
     if (expected.classify.importanceMax !== undefined) expect(c.importance).toBeLessThanOrEqual(expected.classify.importanceMax);
     if (expected.classify.importanceMin !== undefined) expect(c.importance).toBeGreaterThanOrEqual(expected.classify.importanceMin);

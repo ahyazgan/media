@@ -36,7 +36,7 @@ export function Masthead({ siteName = "Kaynak", tagline = "Resmi kaynaktan, daki
 const DEFAULT_NAV = [
   { href: "/", label: "Son Dakika" }, { href: "/kategori/borsa", label: "Borsa" }, { href: "/kategori/mevzuat", label: "Mevzuat" },
   { href: "/kategori/makro", label: "Makro" }, { href: "/kategori/bankacilik", label: "Bankacılık" }, { href: "/kategori/enerji", label: "Enerji" },
-  { href: "/resmi-gazete", label: "Resmi Gazete" }, { href: "/takvim", label: "Takvim" },
+  { href: "/resmi-gazete", label: "Resmi Gazete" }, { href: "/sirket", label: "Şirketler" }, { href: "/takvim", label: "Takvim" },
 ];
 
 const CSS = `

@@ -5,9 +5,22 @@ import { extractNumbers } from "@kaynak/agents";
  * Modelsiz sahte ajanlar: kuru çalıştırma ve testler için. Yalnızca belgeden kopyalanan cümleleri
  * kullanır, böylece numericGroundingCheck'ten geçer. Gerçek haber kalitesi beklenmez.
  */
+/** KAP'ta rutin sayılan bildirim konuları (isNews=false): adres/unvan/iletişim, genel bilgi formu, imza sirküleri vb. */
+const KAP_ROUTINE = /genel bilgi formu|adres değişikliği|iletişim bilgi|unvan değişikliği|imza sirküleri|bağımsız denetim kuruluşu|kayıtlı sermaye tavanı|tescil/;
+const KAP_HIGH = /sermaye artırımı|birleşme|bölünme|kâr payı|temettü|halka arz|pay geri alım|geri alınması/;
+
 export const fakeAgents: Agents = {
-  async classify({ title }) {
+  async classify({ sourceId, title }) {
     const t = title.toLocaleLowerCase("tr");
+    if (sourceId === "kap") {
+      const routine = KAP_ROUTINE.test(t);
+      return {
+        category: "borsa", importance: routine ? 1 : KAP_HIGH.test(t) ? 4 : 3,
+        entities: { companies: [], tickers: [], institutions: [] },
+        isNews: !routine,
+        summaryHint: "Sahte ajan: KAP bildirimi.",
+      };
+    }
     const isUni = /üniversite/.test(t);
     return {
       category: "mevzuat", importance: isUni ? 2 : 3,
@@ -16,7 +29,7 @@ export const fakeAgents: Agents = {
       summaryHint: "Sahte ajan: belgeden özet.",
     };
   },
-  async write({ title, documentText, sourceName }) {
+  async write({ sourceId, title, documentText, sourceName }) {
     const sentences = documentText.split(/(?<=\.)\s+/).map((s) => s.replace(/\s+/g, " ").trim()).filter((s) => s.length > 40 && s.length < 400);
     const picked = sentences.slice(0, 8);
     const body = [`${sourceName} kaynaklı belge yayımlandı: ${title}.`, ...picked].join("\n\n");
@@ -28,7 +41,7 @@ export const fakeAgents: Agents = {
       dek: picked[1] ?? firstQuote,
       bodyMarkdown,
       keyFacts: [{ text: firstQuote, quoteFromSource: firstQuote }],
-      tickers: [], tags: ["resmi-gazete", "mevzuat"],
+      tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : ["resmi-gazete", "mevzuat"],
       numbersUsed: extractNumbers(bodyMarkdown),
     };
   },

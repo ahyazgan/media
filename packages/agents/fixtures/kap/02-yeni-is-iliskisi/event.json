@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400002",
+  "title": "DEMO HOLDİNG A.Ş. — Yeni İş İlişkisi",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400002",
+  "publishedAt": "2026-09-25T11:05:52.000Z",
+  "payload": { "index": 1400002, "companyName": "DEMO HOLDİNG A.Ş.", "stockCodes": ["DEMHO", "DEMLJ"], "companies": [{ "code": "DEMHO", "name": "DEMO HOLDİNG A.Ş." }, { "code": "DEMLJ", "name": "DEMO HOLDİNG A.Ş." }], "section": "ODA", "sectionLabel": "Özel Durum Açıklaması", "subject": "Yeni İş İlişkisi" },
+  "synthetic": true
+}

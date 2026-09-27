@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400005",
+  "title": "ÖRNEK ENERJİ A.Ş. — Finansal Rapor",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400005",
+  "publishedAt": "2026-09-25T15:31:04.000Z",
+  "payload": { "index": 1400005, "companyName": "ÖRNEK ENERJİ A.Ş.", "stockCodes": ["ORNEK"], "companies": [{ "code": "ORNEK", "name": "ÖRNEK ENERJİ A.Ş." }], "section": "FR", "sectionLabel": "Finansal Rapor", "subject": "Finansal Rapor" },
+  "synthetic": true
+}

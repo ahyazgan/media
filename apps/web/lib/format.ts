@@ -16,3 +16,8 @@ export function todayIso(d = new Date()): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 export const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+
+export const SOURCE_LABELS: Record<string, string> = {
+  "resmi-gazete": "T.C. Resmî Gazete", kap: "Kamuyu Aydınlatma Platformu", tcmb: "TCMB", tuik: "TÜİK",
+};
+export const sourceLabel = (id?: string | null) => (id && SOURCE_LABELS[id]) ?? "Resmi kaynak";

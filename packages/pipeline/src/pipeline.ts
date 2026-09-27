@@ -1,5 +1,5 @@
-import { and, eq } from "drizzle-orm";
-import { type Db, rawEvents, documents, articles, reviewQueue, type RawEventRow } from "@kaynak/db";
+import { and, eq, inArray } from "drizzle-orm";
+import { type Db, rawEvents, documents, articles, reviewQueue, companies, companyEvents, type RawEventRow } from "@kaynak/db";
 import type { ClassifyOutput, WriteOutput, EditResult } from "@kaynak/agents";
 import { runEditRules } from "@kaynak/agents";
 import { documentToText, type RawEvent, type SourceAdapter } from "@kaynak/sources";
@@ -23,8 +23,16 @@ export interface PipelineDeps {
   reviewThreshold: number;
   sourceNames?: Record<string, string>;
   log?: (msg: string, meta?: Record<string, unknown>) => void;
-  onPublished?: (article: typeof articles.$inferSelect) => Promise<void>;
+  onPublished?: (article: typeof articles.$inferSelect, ctx: { sourceId: string }) => Promise<void>;
 }
+
+/** Kaynak kimliği → görünen ad (yazar ajanına ve arayüze gider). */
+export const SOURCE_NAMES: Record<string, string> = {
+  "resmi-gazete": "T.C. Resmî Gazete",
+  kap: "Kamuyu Aydınlatma Platformu",
+  tcmb: "Türkiye Cumhuriyet Merkez Bankası",
+  tuik: "Türkiye İstatistik Kurumu",
+};
 
 export type Outcome =
   | { kind: "duplicate" }
@@ -49,7 +57,7 @@ export async function ingestEvents(db: Db, events: RawEvent[]): Promise<RawEvent
 /** 2–6) tek bir raw_event'i uçtan uca işler. */
 export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, row: RawEventRow): Promise<Outcome> {
   const log = deps.log ?? (() => {});
-  const sourceName = deps.sourceNames?.[row.sourceId] ?? row.sourceId;
+  const sourceName = deps.sourceNames?.[row.sourceId] ?? SOURCE_NAMES[row.sourceId] ?? row.sourceId;
   const ev: RawEvent = {
     sourceId: row.sourceId, externalId: row.externalId, title: row.title, url: row.url,
     publishedAt: row.publishedAt, payloadHash: row.payloadHash, payload: row.payload,
@@ -69,6 +77,9 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   const section = typeof row.payload["section"] === "string" ? (row.payload["section"] as string) : undefined;
   const cls = await deps.agents.classify({ sourceId: row.sourceId, title: row.title, textHead: text.slice(0, 2000), section });
   log("classify", { externalId: row.externalId, ...cls });
+
+  // Şirket bağlama: payload.companies → companies (upsert) + company_events. isNews=false olsa da kaydedilir (bildirim geçmişi).
+  const companyCodes = await linkCompanies(deps.db, row, cls.isNews);
 
   if (!cls.isNews) {
     await deps.db.update(rawEvents).set({ status: "skipped" }).where(eq(rawEvents.id, row.id));
@@ -99,15 +110,20 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview ? "published" : "review";
   const reasons = [...edit.reasons, ...(forceReview ? [forceReview] : [])];
   const now = new Date();
+  const tickers = [...new Set([...companyCodes, ...draft.tickers.map((t) => t.toUpperCase())])];
   const [article] = await deps.db.insert(articles).values({
     slug, status, category: cls.category, importance: cls.importance,
     title: draft.title, dek: draft.dek, bodyMarkdown: draft.bodyMarkdown, keyFacts: draft.keyFacts,
-    tickers: draft.tickers, tags: draft.tags, sourceUrl: fetched.url, documentId: doc.id, rawEventId: row.id,
+    tickers, tags: draft.tags, sourceUrl: fetched.url, documentId: doc.id, rawEventId: row.id,
     publishedAt: status === "published" ? now : null, updatedAt: now,
     editorNote: reasons.length ? reasons.join(" | ") : null,
   }).returning();
   if (!article) throw new Error("article insert failed");
   await deps.db.update(rawEvents).set({ status: "processed" }).where(eq(rawEvents.id, row.id));
+  if (companyCodes.length) {
+    await deps.db.update(companyEvents).set({ articleId: article.id })
+      .where(and(eq(companyEvents.rawEventId, row.id), inArray(companyEvents.kapCode, companyCodes)));
+  }
 
   if (status === "rejected") {
     log("edit:reject", { externalId: row.externalId, reasons });
@@ -119,7 +135,7 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     return { kind: "review", articleId: article.id, reasons };
   }
   log("publish", { externalId: row.externalId, slug });
-  await deps.onPublished?.(article);
+  await deps.onPublished?.(article, { sourceId: row.sourceId });
   return { kind: "published", articleId: article.id, slug };
 }
 
@@ -130,6 +146,35 @@ export async function processPending(deps: PipelineDeps, adapter: SourceAdapter,
   const out: Outcome[] = [];
   for (const row of rows) out.push(await processEvent(deps, adapter, row));
   return out;
+}
+
+export interface CompanyRef { code: string; name: string }
+
+/** payload.companies içindeki şirket referanslarını okur (KAP adapter'ı yazar; başka kaynaklar da yazabilir). */
+export function companyRefsOf(payload: Record<string, unknown>): CompanyRef[] {
+  const raw = payload["companies"];
+  if (!Array.isArray(raw)) return [];
+  const out: CompanyRef[] = [];
+  for (const c of raw) {
+    if (!c || typeof c !== "object") continue;
+    const code = String((c as CompanyRef).code ?? "").trim().toUpperCase();
+    const name = String((c as CompanyRef).name ?? "").trim();
+    if (/^[A-Z0-9]{3,6}$/.test(code) && !out.some((x) => x.code === code)) out.push({ code, name: name || code });
+  }
+  return out;
+}
+
+/** companies upsert + company_events insert; bağlanan kodları döndürür. */
+export async function linkCompanies(db: Db, row: RawEventRow, isNews: boolean): Promise<string[]> {
+  const refs = companyRefsOf(row.payload);
+  const codes: string[] = [];
+  for (const ref of refs) {
+    await db.insert(companies).values({ kapCode: ref.code, name: ref.name, slug: ref.code.toLowerCase() })
+      .onConflictDoUpdate({ target: companies.kapCode, set: { name: ref.name, updatedAt: new Date() } });
+    await db.insert(companyEvents).values({ kapCode: ref.code, rawEventId: row.id, isNews }).onConflictDoNothing();
+    codes.push(ref.code);
+  }
+  return codes;
 }
 
 const STOP = new Set(["ve", "ile", "dair", "hakkında", "ilişkin", "sayılı", "tarihli", "kanun", "yönetmelik", "tebliğ", "karar", "kararı", "değişiklik", "yapılmasına", "yönetmeliğinde", "tebliğde", "kapsamında", "uygulanan", "bir", "bu"]);

@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge (ÖRNEK ENERJİ gerçek bir şirket değildir). Pay geri alım bildirimi: tipik ODA, borsa kategorisi, orta önem. Gerçek KAP kopyasıyla değiştirmek için README'ye bak.",
+  "classify": { "category": ["borsa"], "importanceMin": 2, "importanceMax": 4, "isNews": true },
+  "mustGround": ["250.000", "41,20", "41,85", "10.380.000", "1.750.000", "0,35", "500.000.000", "12.08.2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre", "hedef fiyat", "alım fırsatı"]
+}

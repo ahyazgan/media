@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400006",
+  "title": "MİSAL GIDA SANAYİ VE TİCARET A.Ş. — Şirket Genel Bilgi Formu Güncellemesi",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400006",
+  "publishedAt": "2026-09-25T15:42:11.000Z",
+  "payload": { "index": 1400006, "companyName": "MİSAL GIDA SANAYİ VE TİCARET A.Ş.", "stockCodes": ["MISAL"], "companies": [{ "code": "MISAL", "name": "MİSAL GIDA SANAYİ VE TİCARET A.Ş." }], "section": "DG", "sectionLabel": "Diğer Bildirim", "subject": "Şirket Genel Bilgi Formu Güncellemesi" },
+  "synthetic": true
+}

@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Bedelsiz sermaye artırımı: yüksek önem (4) beklenir → varsayılan eşikte review kuyruğuna düşer. Oran/tutar tablosu numericGrounding için zengin.",
+  "classify": { "category": ["borsa"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["400.000.000", "1.000.000.000", "600.000.000", "2.000.000.000", "150", "450.000.000", "150.000.000", "26.09.2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "alım fırsatı", "hedef fiyat", "yatırımcılar için"]
+}

@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Adres/iletişim güncellemesi: rutin bildirim → isNews=false (Faz 2 kabul kriteri: şirket sayfasında listelenir, haber olmaz).",
+  "classify": { "category": ["borsa", "sirketler", "diger"], "importanceMax": 2, "isNews": false },
+  "mustGround": ["15.09.2026", "22.09.2026", "17"],
+  "mustNotContain": []
+}

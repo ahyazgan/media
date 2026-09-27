@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { AdSlot, ArticleListItem, GazetteList, HeroArticle, KapFeed, MacroCalendar } from "@kaynak/ui";
-import { gazetteForDate, latestArticles, latestGazetteDate } from "@/lib/queries";
+import { AdSlot, ArticleListItem, GazetteList, HeroArticle, MacroCalendar } from "@kaynak/ui";
+import { KapFeedLive } from "@/components/KapFeedLive";
+import { SOURCE_LABELS } from "@/lib/format";
+import { gazetteForDate, kapFeed, latestArticles, latestGazetteDate } from "@/lib/queries";
 import { dateLabel, todayIso } from "@/lib/format";
 
 export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
@@ -8,7 +10,7 @@ export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
 const NextLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => <Link href={href} className={className}>{children}</Link>;
 
 export default async function HomePage() {
-  const [items, latestDate] = await Promise.all([latestArticles(24), latestGazetteDate()]);
+  const [items, latestDate, feed] = await Promise.all([latestArticles(24), latestGazetteDate(), kapFeed(12)]);
   const gazDate = latestDate ?? todayIso();
   const gazette = await gazetteForDate(gazDate);
   const [hero, ...rest] = items;
@@ -20,7 +22,7 @@ export default async function HomePage() {
       <AdSlot id="home-top" size="970x90" mobileSize="320x100" />
       <div className="k-grid k-grid--main">
         <div>
-          {hero ? <HeroArticle a={{ ...hero, sourceName: "T.C. Resmî Gazete" }} LinkComponent={NextLink} /> : (
+          {hero ? <HeroArticle a={{ ...hero, sourceName: hero.tickers.length ? SOURCE_LABELS.kap : SOURCE_LABELS["resmi-gazete"] }} LinkComponent={NextLink} /> : (
             <div className="k-empty">
               <p>Henüz yayınlanmış haber yok.</p>
               <p style={{ fontSize: 14 }}>İlk akışı başlatmak için: <code>pnpm pipeline:run -- --fixture</code></p>
@@ -42,7 +44,7 @@ export default async function HomePage() {
         <aside style={{ display: "grid", gap: 28, alignContent: "start" }}>
           <GazetteList compact entries={gazette} dateLabel={dateLabel(gazDate)} issueNo={gazette[0]?.issueNo} LinkComponent={NextLink} />
           <Link href={`/resmi-gazete/${gazDate}`} className="k-btn k-btn--ghost" style={{ justifySelf: "start" }}>Günün tamamı →</Link>
-          <KapFeed />
+          <KapFeedLive initial={feed} />
           <MacroCalendar />
           <AdSlot id="home-rail" size="300x600" mobileSize="300x250" />
         </aside>

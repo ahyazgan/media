@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Finansal rapor: yazar yalnızca belgede verilen tutar ve yüzdeleri kullanmalı; büyüme yorumu ('güçlü', 'rekor') yasak. Gerçek KAP finansal raporları PDF/XBRL tablolarıdır; canlı test için gerçek kopya gerekir.",
+  "classify": { "category": ["borsa"], "importanceMin": 2, "importanceMax": 4, "isNews": true },
+  "mustGround": ["18.450.000.000", "2.115.000.000", "23,7", "42,9", "61.300.000.000", "29.750.000.000", "12.400.000.000", "1.640", "980", "30.06.2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "rekor", "hedef fiyat", "alım fırsatı"]
+}

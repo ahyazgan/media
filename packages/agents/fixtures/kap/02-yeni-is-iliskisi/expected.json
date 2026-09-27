@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Yeni iş ilişkisi / büyük sözleşme: haber değeri yüksek ODA. Birden fazla borsa kodu (holding + bağlı ortaklık) şirket bağlama testidir.",
+  "classify": { "category": ["borsa", "sirketler"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["68,5", "1.240.000.000", "36", "01.11.2026", "42", "180", "30.09.2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "dev adım", "hedef fiyat"]
+}

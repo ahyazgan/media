@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Genel kurul çağrısı: gündemde halka arz yetkisi olduğu için haber; düşük-orta önem.",
+  "classify": { "category": ["borsa"], "importanceMin": 2, "importanceMax": 4, "isNews": true },
+  "mustGround": ["20.10.2026", "19.10.2026", "18.09.2026", "120"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}

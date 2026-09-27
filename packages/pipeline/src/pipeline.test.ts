@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
-import { createDb, articles, rawEvents, documents, reviewQueue, type DbHandle } from "@kaynak/db";
+import { createDb, articles, rawEvents, documents, reviewQueue, companies, companyEvents, type DbHandle } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
-import { ResmiGazeteAdapter, type SourceAdapter, type RawEvent } from "@kaynak/sources";
-import { ingestEvents, processPending, keywordOverlap, type Agents, type Outcome } from "./pipeline.js";
+import { KapAdapter, ResmiGazeteAdapter, type SourceAdapter, type RawEvent } from "@kaynak/sources";
+import { ingestEvents, processPending, keywordOverlap, companyRefsOf, type Agents, type Outcome } from "./pipeline.js";
 import { fakeAgents } from "./fakeAgents.js";
 import { MemoryStore } from "./storage.js";
 import { makeSlug, slugify } from "./slug.js";
@@ -89,6 +89,73 @@ describe("uçtan uca: fihrist → raw_events → belge → makale", () => {
     const [o] = await processPending({ db: h.db, agents: liar, store: new MemoryStore(), reviewThreshold: 4 }, adapter);
     expect(o?.kind).toBe("rejected");
     if (o?.kind === "rejected") expect(o.reasons[0]).toMatch(/7\.777\.777/);
+  });
+});
+
+const KAP_FIX = new URL("../../agents/fixtures/kap/", import.meta.url);
+const kapJson = JSON.parse(readFileSync(new URL("../../sources/fixtures/kap-disclosures.json", import.meta.url), "utf8"));
+const kapDocMap: Record<string, string> = {
+  "1400001": "01-pay-geri-alim", "1400002": "02-yeni-is-iliskisi", "1400003": "03-bedelsiz-sermaye-artirimi",
+  "1400004": "04-genel-kurul-cagrisi", "1400005": "05-finansal-rapor", "1400006": "06-genel-bilgi-formu",
+};
+function offlineKap(k: KapAdapter): SourceAdapter {
+  return {
+    id: k.id, official: true, schedule: () => k.schedule(), fetchNew: async () => [],
+    async fetchDocument(ev: RawEvent) {
+      const text = readFileSync(new URL(`${kapDocMap[ev.externalId]}/document.txt`, KAP_FIX), "utf8");
+      return { url: ev.url, mime: "text/html", bytes: Buffer.from(`<html><body><pre>${text}</pre></body></html>`) };
+    },
+  };
+}
+
+describe("KAP uçtan uca: bildirim listesi → şirketler → haber / bildirim geçmişi (Faz 2 kabul)", () => {
+  const k = new KapAdapter();
+  let outcomes: Outcome[];
+  it("6 bildirim ingest edilir; fon ve eski KAP kayıtları elenmiştir", async () => {
+    const events = k.eventsFromJson(kapJson);
+    expect(events).toHaveLength(6);
+    expect(await ingestEvents(h.db, events)).toHaveLength(6);
+    expect(companyRefsOf(events.find((e) => e.externalId === "1400002")!.payload).map((c) => c.code)).toEqual(["DEMHO", "DEMLJ"]);
+  });
+  it("rutin bildirim (genel bilgi formu) haber olmaz, diğerleri haberleşir; yüksek önem review'a düşer", async () => {
+    const published: { slug: string; sourceId: string }[] = [];
+    outcomes = await processPending({
+      db: h.db, agents: fakeAgents, store: new MemoryStore(), reviewThreshold: 4,
+      onPublished: async (a, ctx) => { published.push({ slug: a.slug, sourceId: ctx.sourceId }); },
+    }, offlineKap(k));
+    const kinds = outcomes.map((o) => o.kind);
+    expect(kinds.filter((x) => x === "skipped")).toHaveLength(1);
+    expect(kinds).not.toContain("rejected");
+    expect(kinds.filter((x) => x === "published").length).toBeGreaterThanOrEqual(2);
+    expect(kinds).toContain("review"); // bedelsiz sermaye artırımı: importance 4
+    expect(published.every((p) => p.sourceId === "kap")).toBe(true);
+    expect(pathsFor({ tickers: ["ORNEK"], slug: "x", category: "borsa", publishedAt: new Date() } as unknown as Parameters<typeof pathsFor>[0], "kap"))
+      .toEqual(["/", "/haber/x", "/kategori/borsa", "/sirket/ornek", "/sirket"]);
+  });
+  it("companies upsert edilir; company_events isNews=false dahil bildirim geçmişini tutar", async () => {
+    const cos = await h.db.select().from(companies);
+    expect(cos.map((c) => c.kapCode).sort()).toEqual(["DEMHO", "DEMLJ", "MISAL", "ORNEK"]);
+    expect(cos.find((c) => c.kapCode === "ORNEK")?.name).toBe("ÖRNEK ENERJİ A.Ş.");
+    expect(cos.find((c) => c.kapCode === "ORNEK")?.slug).toBe("ornek");
+    const evs = await h.db.select({ code: companyEvents.kapCode, isNews: companyEvents.isNews, articleId: companyEvents.articleId, externalId: rawEvents.externalId })
+      .from(companyEvents).innerJoin(rawEvents, eq(rawEvents.id, companyEvents.rawEventId));
+    expect(evs).toHaveLength(7); // 6 bildirim, biri iki kodlu
+    const routine = evs.find((e) => e.externalId === "1400006")!;
+    expect(routine.isNews).toBe(false);
+    expect(routine.articleId).toBeNull();
+    for (const e of evs.filter((e) => e.externalId !== "1400006")) { expect(e.isNews).toBe(true); expect(e.articleId).toBeTruthy(); }
+    expect(evs.filter((e) => e.externalId === "1400002").map((e) => e.code).sort()).toEqual(["DEMHO", "DEMLJ"]);
+  });
+  it("haberin tickers alanı şirket kodlarını içerir; isNews=false raw_event skipped kalır", async () => {
+    const kapArticles = await h.db.select().from(articles).where(eq(articles.category, "borsa"));
+    expect(kapArticles.length).toBe(5);
+    const multi = kapArticles.find((a) => a.tickers.includes("DEMLJ"))!;
+    expect(multi.tickers).toEqual(expect.arrayContaining(["DEMHO", "DEMLJ"]));
+    expect(kapArticles.every((a) => a.tickers.length > 0)).toBe(true);
+    const [skipped] = await h.db.select().from(rawEvents).where(eq(rawEvents.externalId, "1400006"));
+    expect(skipped?.status).toBe("skipped");
+    // Aynı listeyi tekrar ingest etmek yeni satır üretmez (dedupe) ve şirket olayı çoğalmaz
+    expect(await ingestEvents(h.db, k.eventsFromJson(kapJson))).toHaveLength(0);
   });
 });
 

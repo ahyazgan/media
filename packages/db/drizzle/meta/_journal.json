@@ -8,6 +8,13 @@
       "when": 1790458311976,
       "tag": "0000_bouncy_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790491994939,
+      "tag": "0001_kap_companies",
+      "breakpoints": true
     }
   ]
 }

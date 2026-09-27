@@ -5,5 +5,7 @@ export { HeroArticle } from "./HeroArticle.js";
 export { GazetteList, type GazetteEntry } from "./GazetteList.js";
 export { SourceBox } from "./SourceBox.js";
 export { KeyFacts } from "./KeyFacts.js";
-export { MarketTicker, BreakingBar, KapFeed, MacroCalendar, InstallBanner, TabBar, CookieBar } from "./misc.js";
+export { KapFeed, fmtClock, type KapFeedItem } from "./KapFeed.js";
+export { CompanyCard, type CompanySummary } from "./CompanyCard.js";
+export { MarketTicker, BreakingBar, MacroCalendar, InstallBanner, TabBar, CookieBar } from "./misc.js";
 export { CATEGORY_LABELS, categoryLabel } from "./labels.js";

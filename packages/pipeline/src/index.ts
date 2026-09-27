@@ -1,5 +1,5 @@
-export { ingestEvents, processEvent, processPending, keywordOverlap } from "./pipeline.js";
-export type { Agents, PipelineDeps, Outcome } from "./pipeline.js";
+export { ingestEvents, processEvent, processPending, keywordOverlap, linkCompanies, companyRefsOf, SOURCE_NAMES } from "./pipeline.js";
+export type { Agents, PipelineDeps, Outcome, CompanyRef } from "./pipeline.js";
 export { makeSlug, slugify } from "./slug.js";
 export { makeOnPublished, pathsFor } from "./publish.js";
 export { loadEnv, type Env } from "./env.js";

@@ -1,5 +1,5 @@
 /**
- * Faz 2–3 bileşenlerinin yer tutucuları. Arayüzleri şimdiden sabitlenir, veri bağlantısı ilgili fazda gelir.
+ * Faz 3 bileşenlerinin yer tutucuları (KapFeed Faz 2 ile KapFeed.tsx'e taşındı). Arayüzleri şimdiden sabitlenir, veri bağlantısı ilgili fazda gelir.
  * Hepsi /_dev/ui sayfasında listelenir.
  */
 import type { ReactNode } from "react";
@@ -29,17 +29,6 @@ export function BreakingBar({ text, href }: { text?: string; href?: string }) {
   );
 }
 
-export function KapFeed({ items = [] }: { items?: { time: string; code: string; title: string; href: string }[] }) {
-  return (
-    <section className="k-kap">
-      <header className="k-kap__h"><span className="k-label">KAP akışı</span><span className="k-kap__live">● canlı</span></header>
-      {items.length === 0 && <p className="k-muted" style={{ fontSize: 14 }}>KAP akışı Faz 2'de devreye girer.</p>}
-      <ul className="k-kap__list">{items.map((i, k) => <li key={k}><time>{i.time}</time> <b>{i.code}</b> <a href={i.href}>{i.title}</a></li>)}</ul>
-      <style>{`.k-kap__h{display:flex;justify-content:space-between;border-bottom:2px solid var(--accent);padding-bottom:6px;margin-bottom:10px}.k-kap__live{font-size:11px;color:var(--accent)}.k-kap__list{list-style:none;padding:0;margin:0;font-size:14px}.k-kap__list li{padding:6px 0;border-bottom:1px dashed var(--line)}.k-kap__list time{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}`}</style>
-    </section>
-  );
-}
-
 export function MacroCalendar({ items = [] }: { items?: { when: string; institution: string; title: string }[] }) {
   return (
     <section className="k-cal">
@@ -63,7 +52,7 @@ export function TabBar({ items = DEFAULT_TABS }: { items?: { href: string; label
     </nav>
   );
 }
-const DEFAULT_TABS = [{ href: "/", label: "Akış" }, { href: "/resmi-gazete", label: "Gazete" }, { href: "/takvim", label: "Takvim" }, { href: "/kategori/borsa", label: "Borsa" }];
+const DEFAULT_TABS = [{ href: "/", label: "Akış" }, { href: "/resmi-gazete", label: "Gazete" }, { href: "/sirket", label: "Şirketler" }, { href: "/takvim", label: "Takvim" }];
 
 export function CookieBar() {
   return (

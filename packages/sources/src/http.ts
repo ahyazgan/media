@@ -7,6 +7,8 @@ export interface PoliteFetchOptions {
   /** Aynı host'a eş zamanlı istek sınırı (şartname: 2) */
   perHostConcurrency?: number;
   respectRobots?: boolean;
+  /** Ek istek başlıkları (ör. JSON uç noktaları için `accept`) */
+  headers?: Record<string, string>;
   fetchImpl?: typeof fetch;
 }
 
@@ -57,7 +59,7 @@ export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): P
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 30_000);
       try {
-        const res = await f(url, { headers: { "user-agent": ua, accept: "text/html,application/pdf;q=0.9,*/*;q=0.8" }, signal: ctl.signal, redirect: "follow" });
+        const res = await f(url, { headers: { "user-agent": ua, accept: "text/html,application/pdf;q=0.9,*/*;q=0.8", ...opts.headers }, signal: ctl.signal, redirect: "follow" });
         if ((res.status === 429 || res.status === 503 || res.status >= 500) && attempt < maxRetries) {
           const ra = Number(res.headers.get("retry-after"));
           await sleep(Number.isFinite(ra) && ra > 0 ? ra * 1000 : backoff(attempt));

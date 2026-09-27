@@ -1,0 +1,10 @@
+{
+  "sourceId": "kap",
+  "sourceName": "Kamuyu Aydınlatma Platformu",
+  "externalId": "1400003",
+  "title": "MİSAL GIDA SANAYİ VE TİCARET A.Ş. — Sermaye Artırımı - Azaltımı İşlemlerine İlişkin Bildirim",
+  "url": "https://www.kap.org.tr/tr/Bildirim/1400003",
+  "publishedAt": "2026-09-25T14:20:15.000Z",
+  "payload": { "index": 1400003, "companyName": "MİSAL GIDA SANAYİ VE TİCARET A.Ş.", "stockCodes": ["MISAL"], "companies": [{ "code": "MISAL", "name": "MİSAL GIDA SANAYİ VE TİCARET A.Ş." }], "section": "ODA", "sectionLabel": "Özel Durum Açıklaması", "subject": "Sermaye Artırımı - Azaltımı İşlemlerine İlişkin Bildirim" },
+  "synthetic": true
+}

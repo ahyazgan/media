@@ -1,5 +1,5 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { articles, documents, rawEvents, type Article } from "@kaynak/db";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { articles, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
 import { getDb } from "./db";
 
 export async function latestArticles(limit = 20, category?: string): Promise<Article[]> {
@@ -61,3 +61,94 @@ const SECTION_TR: Record<string, string> = {
   "kurul-karari": "Kurul Kararları", genelge: "Genelgeler", yargi: "Yargı Bölümü", duzeltme: "Düzeltmeler", ilan: "İlânlar", diger: "Diğer",
 };
 function prettySection(slug?: string, raw?: string) { return (slug && SECTION_TR[slug]) ?? raw ?? "Diğer"; }
+
+// ---------------------------------------------------------------------------
+// Faz 2 — KAP akışı ve şirket profili
+// ---------------------------------------------------------------------------
+
+export interface KapFeedRow {
+  id: string; publishedAt: string; code: string; company: string; title: string; href: string; isNews: boolean; status: string | null;
+}
+
+/** Son KAP bildirimleri (isNews=false dahil), her satır tek şirket koduyla; haberleşmişse haber linki. */
+export async function kapFeed(limit = 20): Promise<KapFeedRow[]> {
+  const { db } = await getDb();
+  const rows = await db.select({
+    id: rawEvents.id, externalId: rawEvents.externalId, publishedAt: rawEvents.publishedAt, payload: rawEvents.payload, url: rawEvents.url,
+    evStatus: rawEvents.status, articleSlug: articles.slug, articleStatus: articles.status, articleTitle: articles.title,
+  }).from(rawEvents)
+    .leftJoin(articles, eq(articles.rawEventId, rawEvents.id))
+    .where(eq(rawEvents.sourceId, "kap"))
+    .orderBy(desc(rawEvents.publishedAt), desc(rawEvents.externalId)).limit(limit);
+  return rows.map((r) => {
+    const p = r.payload as { stockCodes?: string[]; companyName?: string; subject?: string };
+    const published = r.articleStatus === "published" || r.articleStatus === "corrected";
+    return {
+      id: r.id, publishedAt: r.publishedAt.toISOString(),
+      code: p.stockCodes?.[0] ?? "—", company: p.companyName ?? "",
+      title: published && r.articleTitle ? r.articleTitle : (p.subject ?? "Bildirim"),
+      href: published && r.articleSlug ? `/haber/${r.articleSlug}` : r.url,
+      isNews: r.evStatus !== "skipped" && Boolean(r.articleSlug), status: r.articleStatus,
+    };
+  });
+}
+
+export async function companyByCode(code: string) {
+  const { db } = await getDb();
+  const [c] = await db.select().from(companies).where(eq(companies.kapCode, code.toUpperCase())).limit(1);
+  return c ?? null;
+}
+
+export interface CompanyTimelineRow {
+  id: string; publishedAt: Date; title: string; subject: string; classLabel: string; url: string; isNews: boolean;
+  articleSlug: string | null; articleTitle: string | null; articleStatus: string | null;
+}
+
+/** Şirketin bildirim geçmişi (isNews=false dahil) — şartname §5.1. */
+export async function companyTimeline(code: string, limit = 100): Promise<CompanyTimelineRow[]> {
+  const { db } = await getDb();
+  const rows = await db.select({
+    id: companyEvents.id, isNews: companyEvents.isNews, publishedAt: rawEvents.publishedAt, title: rawEvents.title, url: rawEvents.url, payload: rawEvents.payload,
+    articleSlug: articles.slug, articleTitle: articles.title, articleStatus: articles.status,
+  }).from(companyEvents)
+    .innerJoin(rawEvents, eq(rawEvents.id, companyEvents.rawEventId))
+    .leftJoin(articles, eq(articles.id, companyEvents.articleId))
+    .where(eq(companyEvents.kapCode, code.toUpperCase()))
+    .orderBy(desc(rawEvents.publishedAt)).limit(limit);
+  return rows.map((r) => {
+    const p = r.payload as { subject?: string; sectionLabel?: string };
+    return { id: r.id, publishedAt: r.publishedAt, title: r.title, subject: p.subject ?? r.title, classLabel: p.sectionLabel ?? "Bildirim", url: r.url, isNews: r.isNews, articleSlug: r.articleSlug, articleTitle: r.articleTitle, articleStatus: r.articleStatus };
+  });
+}
+
+/** Şirketle ilgili yayınlanmış haberler (tickers dizisi kodu içerir). */
+export async function articlesForCompany(code: string, limit = 30): Promise<Article[]> {
+  const { db } = await getDb();
+  return db.select().from(articles)
+    .where(and(eq(articles.status, "published"), sql`${articles.tickers} @> ARRAY[${code.toUpperCase()}]::text[]`))
+    .orderBy(desc(articles.publishedAt)).limit(limit);
+}
+
+export interface CompanyIndexRow { kapCode: string; name: string; sector: string | null; disclosureCount: number; newsCount: number; lastDisclosureAt: Date | null }
+
+/** /sirket listesi: bildirim ve haber sayılarıyla, son bildirime göre sıralı. */
+export async function companiesIndex(limit = 200): Promise<CompanyIndexRow[]> {
+  const { db } = await getDb();
+  const rows = await db.select({
+    kapCode: companies.kapCode, name: companies.name, sector: companies.sector,
+    disclosureCount: sql<number>`count(${companyEvents.id})::int`,
+    newsCount: sql<number>`count(${companyEvents.articleId})::int`,
+    lastDisclosureAt: sql<Date | null>`max(${rawEvents.publishedAt})`,
+  }).from(companies)
+    .leftJoin(companyEvents, eq(companyEvents.kapCode, companies.kapCode))
+    .leftJoin(rawEvents, eq(rawEvents.id, companyEvents.rawEventId))
+    .groupBy(companies.kapCode, companies.name, companies.sector)
+    .orderBy(sql`max(${rawEvents.publishedAt}) desc nulls last`, companies.kapCode).limit(limit);
+  return rows.map((r) => ({ ...r, lastDisclosureAt: r.lastDisclosureAt ? new Date(r.lastDisclosureAt) : null }));
+}
+
+export async function companiesByCodes(codes: string[]) {
+  if (!codes.length) return [];
+  const { db } = await getDb();
+  return db.select().from(companies).where(inArray(companies.kapCode, codes.map((c) => c.toUpperCase())));
+}
