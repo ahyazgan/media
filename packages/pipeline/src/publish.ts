@@ -1,6 +1,8 @@
 import type { Article, Db } from "@kaynak/db";
 import type { Env } from "./env.js";
 import { sendPushForArticle, type PushSender } from "./push.js";
+import { postArticleToX } from "./x.js";
+import { distributionLog, type Db as _Db } from "@kaynak/db";
 
 export interface PublishHooks {
   fetchImpl?: typeof fetch;
@@ -20,11 +22,15 @@ export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {
   return async (a: Article, ctx?: { sourceId: string }): Promise<void> => {
     const jobs: Promise<unknown>[] = [
       revalidate(env, a, fetchImpl, ctx?.sourceId),
-      telegram(env, a, fetchImpl),
+      telegram(env, a, fetchImpl).then((sent) => { if (sent !== undefined && h.db) return logTelegram(h.db, a, sent); }),
       indexNow(env, a, fetchImpl),
     ];
     if (h.db && h.push && a.importance >= env.PUSH_MIN_IMPORTANCE) {
       jobs.push(sendPushForArticle(h.db, h.push, a, env.SITE_URL, h.log).catch((e) => console.warn("[publish] push failed:", (e as Error).message)));
+    }
+    if (h.db) {
+      const db = h.db;
+      jobs.push(postArticleToX(db, env, a, fetchImpl).then((r) => h.log?.("x", { article: a.slug, ...r })).catch((e) => console.warn("[publish] x failed:", (e as Error).message)));
     }
     await Promise.allSettled(jobs);
   };
@@ -49,13 +55,20 @@ async function revalidate(env: Env, a: Article, f: typeof fetch, sourceId?: stri
   }).catch((e) => console.warn("[publish] revalidate failed:", (e as Error).message));
 }
 
-async function telegram(env: Env, a: Article, f: typeof fetch) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHANNEL_ID) return;
+/** Telegram: her haber, başlık + dek + link. Döndürdüğü değer: gönderildi mi (undefined = yapılandırılmamış). */
+async function telegram(env: Env, a: Article, f: typeof fetch): Promise<{ ok: boolean; detail?: string } | undefined> {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHANNEL_ID) return undefined;
   const text = `<b>${escapeHtml(a.title)}</b>\n${escapeHtml(a.dek)}\n${env.SITE_URL}/haber/${a.slug}`;
-  await f(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: env.TELEGRAM_CHANNEL_ID, text, parse_mode: "HTML", disable_web_page_preview: false }),
-  }).catch((e) => console.warn("[publish] telegram failed:", (e as Error).message));
+  try {
+    const res = await f(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHANNEL_ID, text, parse_mode: "HTML", disable_web_page_preview: false }),
+    });
+    return res.ok ? { ok: true } : { ok: false, detail: `HTTP ${res.status}` };
+  } catch (e) { console.warn("[publish] telegram failed:", (e as Error).message); return { ok: false, detail: (e as Error).message }; }
+}
+async function logTelegram(db: _Db, a: Article, r: { ok: boolean; detail?: string }) {
+  await db.insert(distributionLog).values({ channel: "telegram", articleId: a.id, status: r.ok ? "ok" : "failed", detail: r.detail ?? null }).catch(() => {});
 }
 
 async function indexNow(env: Env, a: Article, f: typeof fetch) {

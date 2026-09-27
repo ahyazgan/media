@@ -5,10 +5,14 @@ import "@kaynak/ui/tokens.css";
 import "./globals.css";
 import { Masthead, TabBar } from "@kaynak/ui";
 import { PwaClient } from "@/components/PwaClient";
+import { Vitals } from "@/components/Vitals";
+import { TabBarAd } from "@/components/TabBarAd";
 import { todayLabel } from "@/lib/format";
 
-const fraunces = Fraunces({ subsets: ["latin", "latin-ext"], weight: ["600", "800"], variable: "--font-fraunces", display: "swap" });
-const dmSans = DM_Sans({ subsets: ["latin", "latin-ext"], weight: ["400", "500", "700"], variable: "--font-dm", display: "swap" });
+// display: "optional" — font ilk ~100 ms içinde gelmezse o sayfa yüklemesinde metrik uyumlu yedek (adjustFontFallback) kalır; font arka planda
+// önbelleğe alınır, sonraki sayfalarda kullanılır. Böylece yavaş ağda LCP font takasına takılmaz (şartname Faz 5: LCP < 2,5 s mobil) ve CLS oluşmaz.
+const fraunces = Fraunces({ subsets: ["latin", "latin-ext"], weight: ["600", "800"], variable: "--font-fraunces", display: "optional" });
+const dmSans = DM_Sans({ subsets: ["latin", "latin-ext"], weight: ["400", "500", "700"], variable: "--font-dm", display: "optional" });
 
 const SITE = process.env.SITE_URL ?? "http://localhost:3000";
 
@@ -36,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Masthead dateLabel={todayLabel()} LinkComponent={NextLink} />
         <main className="k-container k-main">{children}</main>
+        <TabBarAd />
         <footer className="k-footer">
           <div className="k-container k-footer__inner">
             <p className="k-footer__disclaimer"><b>Yatırım tavsiyesi değildir.</b> Kaynak'taki haberler resmi belgelerden otomatik üretilir ve editör kurallarından geçer; yorum, tahmin veya öneri içermez.</p>
@@ -48,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </footer>
         <TabBar />
         <PwaClient />
+        <Vitals />
       </body>
     </html>
   );

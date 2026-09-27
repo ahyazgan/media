@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AdSlot, ArticleListItem, GazetteList, HeroArticle, MacroCalendar } from "@kaynak/ui";
+import { ArticleListItem, GazetteList, HeroArticle, MacroCalendar } from "@kaynak/ui";
+import { Ad } from "@/components/Ad";
 import { KapFeedLive } from "@/components/KapFeedLive";
 import { SOURCE_LABELS } from "@/lib/format";
 import { calendarUpcoming, gazetteForDate, kapFeed, latestArticles, latestGazetteDate } from "@/lib/queries";
@@ -19,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <AdSlot id="home-top" size="970x90" mobileSize="320x100" />
+      <Ad id="home-top" />
       <div className="k-grid k-grid--main">
         <div>
           {hero ? <HeroArticle a={{ ...hero, sourceName: hero.tickers.length ? SOURCE_LABELS.kap : SOURCE_LABELS["resmi-gazete"] }} LinkComponent={NextLink} /> : (
@@ -46,7 +47,7 @@ export default async function HomePage() {
           <Link href={`/resmi-gazete/${gazDate}`} className="k-btn k-btn--ghost" style={{ justifySelf: "start" }}>Günün tamamı →</Link>
           <KapFeedLive initial={feed} />
           <MacroCalendar items={calendar} limit={6} LinkComponent={NextLink} />
-          <AdSlot id="home-rail" size="300x600" mobileSize="300x250" />
+          <Ad id="home-rail" />
         </aside>
       </div>
     </>

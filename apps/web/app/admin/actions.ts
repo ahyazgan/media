@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { correctionRequests, rawEvents } from "@kaynak/db";
+import { adInquiries, correctionRequests, rawEvents } from "@kaynak/db";
 import { publishCorrection, publishFromReview, rejectFromReview, retractArticle } from "@kaynak/pipeline/editorial";
 import { retryFailure } from "@kaynak/pipeline/failures";
 import { getDb } from "@/lib/db";
@@ -84,4 +84,12 @@ export async function retryFailureAction(fd: FormData) {
   await retryFailure(db, id, await editorName());
   revalidatePath("/admin/hatalar"); revalidatePath("/admin");
   back("/admin/hatalar", "Yeniden denemeye alındı; worker 5 dk içinde işler");
+}
+
+export async function resolveAdInquiryAction(fd: FormData) {
+  const id = str(fd, "id");
+  const { db } = await getDb();
+  await db.update(adInquiries).set({ resolvedAt: new Date(), resolvedBy: await editorName(), note: str(fd, "note") || "kapatıldı" }).where(eq(adInquiries.id, id));
+  revalidatePath("/admin/reklam"); revalidatePath("/admin");
+  back("/admin/reklam", "Talep kapatıldı");
 }

@@ -16,7 +16,8 @@ packages/pipeline dedupe → classify → (şirket bağlama) → verify → writ
 packages/ui       Fuşya Gazete token'ları ve bileşenler
 ```
 
-Durum: Faz 0–4 tamam (iskelet, Resmi Gazete, KAP, takvim + PWA + dağıtım, admin + SEO + kurumsal); sırada Faz 5 (gelir: reklam, X paylaşımı).
+Durum: Faz 0–5 tamam (iskelet, Resmi Gazete, KAP, takvim + PWA + dağıtım, admin + SEO + kurumsal, reklam + X). Yayına çıkış için kod dışı
+adımlar ve sonraki geliştirmeler: [docs/YAYINA-HAZIRLIK.md](docs/YAYINA-HAZIRLIK.md).
 
 ## Hızlı başlangıç (Docker'sız)
 
@@ -102,6 +103,22 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 - **Not:** `next build` `rss.xml`/`sitemap.xml`/`news-sitemap.xml`'i derleme anında üretir ve veritabanına bağlanır; PGlite dosya modunda o sırada
   başka bir süreç (worker ya da üretim sunucusu) aynı dosyayı açık tutuyorsa derleme "unreachable" hatasıyla düşer. Derlerken diğer süreci kapatın
   ya da Postgres kullanın.
+
+## Reklam, X paylaşımı ve Core Web Vitals (Faz 5)
+
+- **Reklam:** `apps/web/components/Ad.tsx` — rıza kapılı slotlar (`NEXT_PUBLIC_AD_PROVIDER=adsense|gam`). Çerez barında "Kabul et" seçilmeden
+  hiçbir reklam scripti yüklenmez ("Sadece zorunlu" → yalnızca sabit boyutlu yer tutucu). Slot boyutları sabittir (CLS 0), her slot "Reklam" /
+  "Sponsorlu" etiketlidir, kayan kutu ve otomatik video yoktur (Better Ads). `ads.txt` `ADS_TXT` değişkeninden üretilir. PWA'da sekme çubuğu
+  üstü 320×50 yalnızca standalone modda ve akış içinde gösterilir.
+- **Doğrudan satış:** `/reklam` (alanlar, ilkeler, teklif formu) → `ad_inquiries` + `AD_SALES_EMAIL` bildirimi; admin "Reklam talepleri".
+- **X:** `packages/pipeline/src/x.ts` — OAuth 1.0a (HMAC-SHA1, ek bağımlılık yok; imza X belgelerindeki örnek vektörle test edilir), API v2
+  `POST /2/tweets`, günde en fazla `X_MAX_PER_DAY` (≤30) gönderi, `X_MIN_IMPORTANCE` altı atlanır, her haber bir kez. Telegram/X/push sonuçları
+  `distribution_log`'a yazılır; pano "X bugün n/30" gösterir.
+- **Core Web Vitals:** istemci oturumların %10'unda LCP/CLS/INP/FCP/TTFB'yi `/api/vitals`'a gönderir (çerezsiz); pano 7 günlük p75'i mobil
+  ayrımıyla gösterir (kabul: LCP < 2,5 s, CLS < 0,1). Fontlar `display: "optional"` ile yüklenir: yavaş ağda metrik uyumlu yedek font
+  kalır, font arka planda önbelleğe alınır; böylece LCP font takasına takılmaz.
+- **Lighthouse (mobil, simüle yavaş 4G, bu ortamda):** performans 96–97, CLS 0, TBT 60–100 ms, FCP 0,7–0,8 s, LCP 2,4–2,8 s (koşular arası
+  ±0,2 s oynar; gözlenen gerçek render gecikmesi ~100 ms, sayı Lighthouse'un ağ modelinden gelir). Kabul ölçütü canlı alan verisi (pano) ile izlenir.
 
 ## Bilinen kısıtlar
 

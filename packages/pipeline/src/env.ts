@@ -25,6 +25,13 @@ const Env = z.object({
   MAIL_FROM: z.string().default("Kaynak <bulten@example.com>"),
   MAIL_DIR: z.string().default("./storage/mail"),
   BULLETIN_TIME: z.string().regex(/^\d{2}:\d{2}$/).default("07:30"),
+  // Faz 5 — X paylaşımı (yalnızca resmi hesap; günde en fazla 30)
+  X_CONSUMER_KEY: z.string().optional(),
+  X_CONSUMER_SECRET: z.string().optional(),
+  X_ACCESS_TOKEN: z.string().optional(),
+  X_ACCESS_SECRET: z.string().optional(),
+  X_MAX_PER_DAY: z.coerce.number().int().min(0).max(30).default(30),
+  X_MIN_IMPORTANCE: z.coerce.number().int().min(1).max(6).default(3),
   TCMB_FEED_URL: z.string().optional(),
   TUIK_FEED_URL: z.string().optional(),
   TCMB_CALENDAR_URL: z.string().optional(),

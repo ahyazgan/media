@@ -1,18 +1,39 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
-import { articles, articleVersions, correctionRequests, documents, jobFailures, metricsDaily, rawEvents, reviewQueue, type Article } from "@kaynak/db";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, or } from "drizzle-orm";
+import { adInquiries, articles, articleVersions, correctionRequests, documents, jobFailures, metricsDaily, rawEvents, reviewQueue, webVitals, type Article } from "@kaynak/db";
 import { computeDailyMetrics, dashboardCounts } from "@kaynak/pipeline/metrics";
 import { istanbulDate } from "@kaynak/pipeline";
 import { getDb } from "./db";
 
 export async function adminDashboard() {
   const { db } = await getDb();
-  const [counts, today, recent] = await Promise.all([
+  const [counts, today, recent, vitals] = await Promise.all([
     dashboardCounts(db),
     computeDailyMetrics(db, istanbulDate(new Date())),
     db.select().from(metricsDaily).orderBy(desc(metricsDaily.date)).limit(14),
+    vitalsSummary(),
   ]);
-  return { counts, today, recent };
+  return { counts, today, recent, vitals };
+}
+
+export interface VitalRow { name: string; p75All: number | null; p75Mobile: number | null; samples: number; threshold: [number, number] }
+const THRESHOLDS: Record<string, [number, number]> = { LCP: [2500, 4000], CLS: [0.1, 0.25], INP: [200, 500], FCP: [1800, 3000], TTFB: [800, 1800] };
+const p75 = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.ceil(0.75 * s.length) - 1)]!; };
+
+/** Core Web Vitals son 7 gün p75 (tüm cihazlar ve yalnızca mobil). Şartname Faz 5 kabul: CLS < 0,1, LCP < 2,5 s mobil. */
+export async function vitalsSummary(days = 7): Promise<VitalRow[]> {
+  const { db } = await getDb();
+  const rows = await db.select({ name: webVitals.name, value: webVitals.value, mobile: webVitals.mobile }).from(webVitals)
+    .where(gte(webVitals.createdAt, new Date(Date.now() - days * 86_400_000))).orderBy(desc(webVitals.createdAt)).limit(20_000);
+  return Object.keys(THRESHOLDS).map((name) => {
+    const all = rows.filter((r) => r.name === name);
+    return { name, p75All: p75(all.map((r) => r.value)), p75Mobile: p75(all.filter((r) => r.mobile).map((r) => r.value)), samples: all.length, threshold: THRESHOLDS[name]! };
+  });
+}
+
+export async function adInquiryList(limit = 200) {
+  const { db } = await getDb();
+  return db.select().from(adInquiries).orderBy(asc(adInquiries.resolvedAt), desc(adInquiries.createdAt)).limit(limit);
 }
 
 export interface ReviewRow { queueId: string; reason: string; createdAt: Date; article: Article; sourceId: string | null }

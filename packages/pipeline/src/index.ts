@@ -14,3 +14,5 @@ export type { PublishHooks } from "./publish.js";
 export { snapshotArticle, snapshotOf, versionsOf, publishFromReview, rejectFromReview, publishCorrection, retractArticle, type ArticleSnapshot, type CorrectionPatch } from "./editorial.js";
 export { computeDailyMetrics, persistDailyMetrics, dashboardCounts, type DailyMetrics } from "./metrics.js";
 export { recordFailure, retryFailure } from "./failures.js";
+export { postArticleToX, composeTweet, xConfigured, xPostedToday, X_API } from "./x.js";
+export { authorizationHeader, signatureBase, percentEncode } from "./oauth1.js";

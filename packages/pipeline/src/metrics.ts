@@ -3,7 +3,8 @@
  * numericGroundingCheck red sayısı, abone sayıları. Günlük satır `metrics_daily`'ye yazılır; admin panosu son günleri gösterir.
  */
 import { and, count, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
-import { articles, articleVersions, jobFailures, metricsDaily, newsletterSubscribers, pushSubscriptions, rawEvents, reviewQueue, type Db } from "@kaynak/db";
+import { adInquiries, articles, articleVersions, jobFailures, metricsDaily, newsletterSubscribers, pushSubscriptions, rawEvents, reviewQueue, type Db } from "@kaynak/db";
+import { xPostedToday } from "./x.js";
 
 export interface DailyMetrics {
   date: string;
@@ -64,7 +65,7 @@ export async function persistDailyMetrics(db: Db, isoDate: string): Promise<Dail
 }
 
 /** Pano özeti: açık işler ve abone sayıları. */
-export async function dashboardCounts(db: Db) {
+export async function dashboardCounts(db: Db, opts: { xMax?: number } = {}) {
   const [q] = await db.select({ n: count() }).from(reviewQueue).where(isNull(reviewQueue.resolvedAt));
   const [f] = await db.select({ n: count() }).from(jobFailures).where(isNull(jobFailures.resolvedAt));
   const [pub] = await db.select({ n: count() }).from(articles).where(eq(articles.status, "published"));
@@ -72,5 +73,7 @@ export async function dashboardCounts(db: Db) {
   const [nl] = await db.select({ n: count() }).from(newsletterSubscribers).where(and(isNotNull(newsletterSubscribers.confirmedAt), isNull(newsletterSubscribers.unsubscribedAt)));
   const [pending] = await db.select({ n: count() }).from(rawEvents).where(eq(rawEvents.status, "new"));
   const [corr] = await db.select({ n: sql<number>`count(*)::int` }).from(articles).where(eq(articles.status, "corrected"));
-  return { openReviews: q?.n ?? 0, openFailures: f?.n ?? 0, published: pub?.n ?? 0, pushSubscribers: push?.n ?? 0, newsletterSubscribers: nl?.n ?? 0, pendingEvents: pending?.n ?? 0, corrected: corr?.n ?? 0 };
+  const [ads] = await db.select({ n: count() }).from(adInquiries).where(isNull(adInquiries.resolvedAt));
+  const xToday = await xPostedToday(db);
+  return { openReviews: q?.n ?? 0, openFailures: f?.n ?? 0, published: pub?.n ?? 0, pushSubscribers: push?.n ?? 0, newsletterSubscribers: nl?.n ?? 0, pendingEvents: pending?.n ?? 0, corrected: corr?.n ?? 0, openAdInquiries: ads?.n ?? 0, xToday, xMax: opts.xMax ?? Number(process.env.X_MAX_PER_DAY ?? 30) };
 }

@@ -1,5 +1,5 @@
 export { Masthead } from "./Masthead.js";
-export { AdSlot } from "./AdSlot.js";
+export { AdSlot, type AdSize } from "./AdSlot.js";
 export { ArticleListItem, type ArticleSummary } from "./ArticleListItem.js";
 export { HeroArticle } from "./HeroArticle.js";
 export { GazetteList, type GazetteEntry } from "./GazetteList.js";

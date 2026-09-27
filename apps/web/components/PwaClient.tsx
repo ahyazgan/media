@@ -69,7 +69,9 @@ export function PwaClient() {
 
   return (
     <>
-      {cookie === null && <CookieBar onEssential={() => { write(LS.cookie, "essential"); setCookie("essential"); }} onAccept={() => { write(LS.cookie, "all"); setCookie("all"); }} />}
+      {cookie === null && <CookieBar
+        onEssential={() => { write(LS.cookie, "essential"); setCookie("essential"); window.dispatchEvent(new CustomEvent("k-consent", { detail: "essential" })); }}
+        onAccept={() => { write(LS.cookie, "all"); setCookie("all"); window.dispatchEvent(new CustomEvent("k-consent", { detail: "all" })); }} />}
       {install && cookie !== null && (
         <InstallBanner mode={install} onDismiss={() => { write(LS.install, String(Date.now())); setInstall(null); }}
           onInstall={async () => { if (!bip) return; await bip.prompt(); const c = await bip.userChoice; if (c.outcome === "accepted") setInstall(null); }} />

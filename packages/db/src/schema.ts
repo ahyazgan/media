@@ -174,6 +174,45 @@ export const jobFailures = pgTable("job_failures", {
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 }, (t) => [index("job_failures_open").on(t.resolvedAt, t.failedAt)]);
 
+/** Doğrudan reklam satışı talepleri (/reklam formu, şartname Faz 5). */
+export const adInquiries = pgTable("ad_inquiries", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  company: text("company").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  budget: text("budget"),
+  formats: text("formats").array().notNull().default(sql`'{}'::text[]`),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  resolvedBy: text("resolved_by"),
+  note: text("note"),
+}, (t) => [index("ad_inquiries_open").on(t.resolvedAt, t.createdAt)]);
+
+/** Dağıtım günlüğü: Telegram / X / push gönderimleri; günlük X sınırı (30) ve tekrar gönderimi önleme buradan okunur. */
+export const distributionChannel = pgEnum("distribution_channel", ["telegram", "x", "push"]);
+export const distributionLog = pgTable("distribution_log", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  channel: distributionChannel("channel").notNull(),
+  articleId: text("article_id").notNull().references(() => articles.id),
+  status: text("status").notNull(), // ok | failed | skipped
+  externalId: text("external_id"),
+  detail: text("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("distribution_log_channel_created").on(t.channel, t.createdAt), index("distribution_log_article").on(t.articleId)]);
+
+/** Core Web Vitals örnekleri (şartname Faz 5 kabul: CLS < 0,1, LCP < 2,5 s mobil) — istemci %10 örnekler, admin p75 gösterir. */
+export const webVitals = pgTable("web_vitals", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),          // LCP | CLS | INP | FCP | TTFB
+  value: real("value").notNull(),
+  rating: text("rating").notNull(),      // good | needs-improvement | poor
+  path: text("path").notNull(),
+  mobile: boolean("mobile").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("web_vitals_name_created").on(t.name, t.createdAt)]);
+
 export const metricsDaily = pgTable("metrics_daily", {
   date: date("date").primaryKey(),
   timeToPublishP50: real("time_to_publish_p50"),
@@ -204,4 +243,7 @@ export type ReviewQueueRow = typeof reviewQueue.$inferSelect;
 export type CorrectionRequest = typeof correctionRequests.$inferSelect;
 export type JobFailure = typeof jobFailures.$inferSelect;
 export type MetricsDaily = typeof metricsDaily.$inferSelect;
+export type AdInquiry = typeof adInquiries.$inferSelect;
+export type DistributionLogRow = typeof distributionLog.$inferSelect;
+export type WebVital = typeof webVitals.$inferSelect;
 export type CompanyEvent = typeof companyEvents.$inferSelect;

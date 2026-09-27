@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdSlot, ArticleListItem } from "@kaynak/ui";
+import { ArticleListItem } from "@kaynak/ui";
+import { Ad } from "@/components/Ad";
 import { articlesForCompany, companyByCode, companyTimeline } from "@/lib/queries";
 import { dateTimeLabel } from "@/lib/format";
 
@@ -84,7 +85,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ kod: s
           @media (max-width:640px){.k-tl__i{grid-template-columns:1fr;gap:2px}}
         `}</style>
       </div>
-      <aside><AdSlot id="company-rail" size="300x600" mobileSize="300x250" /></aside>
+      <aside><Ad id="company-rail" /></aside>
     </div>
   );
 }

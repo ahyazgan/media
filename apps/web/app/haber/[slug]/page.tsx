@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { marked } from "marked";
-import { AdSlot, ArticleListItem, CompanyCard, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
+import { ArticleListItem, CompanyCard, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
+import { Ad } from "@/components/Ad";
 import { articleBySlug, companiesByCodes, relatedArticles } from "@/lib/queries";
 import { dateLabel, dateTimeLabel, sourceLabel } from "@/lib/format";
 
@@ -79,9 +80,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             )}
           </aside>
         )}
-        <AdSlot id="article-top" size="970x90" mobileSize="320x100" />
+        <Ad id="article-top" />
         <div className="k-article__body" dangerouslySetInnerHTML={{ __html: before }} />
-        {after && <AdSlot id="article-inline" size="300x250" mobileSize="336x280" />}
+        {after && <Ad id="article-inline" />}
         {after && <div className="k-article__body" dangerouslySetInnerHTML={{ __html: after }} />}
         <SourceBox
           title={ev?.title ?? "Kaynak belge"} institution={institution}
@@ -97,7 +98,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </section>
         )}
       </article>
-      <aside><AdSlot id="article-rail" size="300x600" mobileSize="300x250" /></aside>
+      <aside><Ad id="article-rail" /></aside>
     </div>
   );
 }
