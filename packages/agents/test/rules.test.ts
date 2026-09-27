@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runEditRules } from "../src/edit/rules.js";
+import { runEditRules, quoteAppearsIn } from "../src/edit/rules.js";
 import type { WriteOutput } from "../src/schemas.js";
 
 const DOC = `Ticaret Bakanlığından: MADDE 1- 30/5/2018 tarihli ve 30436 sayılı Resmî Gazete'de yayımlanan Yönetmeliğin 7 nci maddesinin ikinci fıkrasına aşağıdaki cümleler eklenmiştir. "Komisyon, ticaret il müdürü başkanlığında üç üyeden oluşur." MADDE 3- Bu Yönetmelik 1/10/2025 tarihinde yürürlüğe girer.`;
@@ -83,5 +83,14 @@ describe("uzunluk alt sınırı kısa belgelerde esner", () => {
   it("uzun belgede 120 kelime şartı sürer", () => {
     const longDoc = Array.from({ length: 80 }, () => "Merkez Bankası rezerv verilerini açıkladı.").join(" ");
     expect(runEditRules(art, longDoc, { importance: 2, reviewThreshold: 4 }).reasons.join()).toMatch(/uzunluk/);
+  });
+});
+
+describe("kısaltılmış alıntı", () => {
+  const doc = "TÜFE Eylül ayında bir önceki aya göre yüzde 2,1, bir önceki yılın Aralık ayına göre yüzde 21,6, bir önceki yılın aynı ayına göre yüzde 28,4 artış gösterdi.";
+  it("parçalar sırayla geçiyorsa kabul", () => expect(quoteAppearsIn("TÜFE Eylül ayında bir önceki aya göre yüzde 2,1, ... yüzde 28,4 artış gösterdi.", doc)).toBe(true));
+  it("parçalardan biri belgede yoksa ya da sıra bozuksa ret", () => {
+    expect(quoteAppearsIn("TÜFE Eylül ayında … yüzde 35 artış gösterdi.", doc)).toBe(false);
+    expect(quoteAppearsIn("yüzde 28,4 artış gösterdi … TÜFE Eylül ayında", doc)).toBe(false);
   });
 });

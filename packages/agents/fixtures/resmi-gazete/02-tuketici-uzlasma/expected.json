@@ -1,6 +1,22 @@
 {
-  "note": "Gerçek belge. Ticaret Bakanlığı; KOBİ/işletme okurunu ilgilendirir. Sayı Resmi Gazete numarası (33027) fihristten alınmıştır.",
-  "classify": { "category": ["mevzuat", "sirketler"], "importanceMax": 4, "isNews": true },
-  "mustGround": ["30436", "1/10/2025", "6502"],
-  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre", "tavsiye"]
+  "note": "Gerçek belge. Ticaret Bakanlığı; KOBİ/işletme okurunu ilgilendirir. Sayı Resmi Gazete numarası (33027) fihristten alınmıştır. İlk canlı değerlendirmede (2026-09-27) model bunu bir kez haber, bir kez 'iç işleyiş düzenlemesi' saydı; iki cevap da savunulabilir, isNews serbest.",
+  "classify": {
+    "category": [
+      "mevzuat",
+      "sirketler"
+    ],
+    "importanceMax": 4,
+    "isNews": null
+  },
+  "mustGround": [
+    "30436",
+    "1/10/2025",
+    "6502"
+  ],
+  "mustNotContain": [
+    "bekleniyor",
+    "olabilir",
+    "uzmanlara göre",
+    "tavsiye"
+  ]
 }

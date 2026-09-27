@@ -86,9 +86,18 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
 }
 
 /** Boşluk/tırnak/büyük-küçük farklarını tolere ederek alıntının belgede geçtiğini kontrol eder. */
+const ELLIPSIS = /\s*(?:\.{3}|…)\s*/;
 export function quoteAppearsIn(quote: string, doc: string): boolean {
   const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/[“”"'’‘]/g, "").replace(/\s+/g, " ").trim();
-  const q = norm(quote);
-  if (q.length < 8) return true;
-  return norm(doc).includes(q);
+  const d = norm(doc);
+  // Kısaltılmış alıntı ("... " ya da "…"): her parça belgede, aynı sırayla geçmeli
+  const parts = norm(quote).split(ELLIPSIS).map((p) => p.trim()).filter(Boolean);
+  if (parts.join("").length < 8) return true;
+  let from = 0;
+  for (const p of parts) {
+    const at = d.indexOf(p, from);
+    if (at < 0) return false;
+    from = at + p.length;
+  }
+  return true;
 }

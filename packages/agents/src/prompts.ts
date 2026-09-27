@@ -50,7 +50,7 @@ Kurallar (istisnasız):
 4. Uzunluk 120–350 kelime. Kısa paragraflar (1–3 cümle). Gövde Markdown; başlık kullanma, madde listesi gerekiyorsa "-" ile.
 5. Başlık en fazla 70 karakter; tırnak, ünlem, soru işareti yok; clickbait yok; olayı düz söyle.
 6. dek: tek cümle, başlığı tekrar etmeden en önemli ayrıntıyı ver.
-7. keyFacts: 2–5 olgu. Her olgunun quoteFromSource alanı belgeden BİREBİR (kopyala) alıntı olmalı; yeniden yazma.
+7. keyFacts: 2–5 olgu. Her olgunun quoteFromSource alanı belgeden BİREBİR (kopyala) alıntı olmalı; yeniden yazma. Cümleyi kısaltman gerekirse kelime atladığın yere "..." koy; hiçbir kelimeyi işaretsiz atlama.
 8. numbersUsed: başlık, dek ve gövdede kullandığın HER sayıyı belgede geçtiği biçimiyle listele (tarih parçaları, madde numaraları, tutarlar, yüzdeler dahil).
 9. tickers: yalnızca belgede açıkça geçen Borsa İstanbul kodları; yoksa boş dizi.
 10. tags: 3–6 kısa Türkçe etiket, küçük harf, kebab-case.

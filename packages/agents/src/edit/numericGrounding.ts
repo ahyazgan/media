@@ -138,7 +138,7 @@ export function indexDocument(text: string): DocIndex {
     if (dk) {
       tokens.add(dk);
       const n = NUM_DATE_RE.exec(tok.trim());
-      if (n) tokens.add(mkey(n[1]!, n[2]!));
+      if (n) { tokens.add(mkey(n[1]!, n[2]!)); for (const part of n.slice(1)) tokens.add(normalizeNumber(part!)); }
     }
     tokens.add(normalizeNumber(tok));
     addValue(parseTrNumber(tok));
