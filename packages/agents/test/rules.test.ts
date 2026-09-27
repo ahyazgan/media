@@ -73,3 +73,15 @@ describe("kaynağa atıflı tahmin ifadeleri", () => {
     expect(r.banned.map((b) => b.id)).toContain("bekleniyor");
   });
 });
+
+describe("uzunluk alt sınırı kısa belgelerde esner", () => {
+  const shortDoc = Array.from({ length: 30 }, () => "Merkez Bankası rezerv verilerini açıkladı.").join(" "); // ~150 kelime
+  const body = Array.from({ length: 16 }, () => "Merkez Bankası rezerv verilerini açıkladı.").join(" ");  // ~80 kelime
+  const art: WriteOutput = { title: "Merkez Bankası rezerv verilerini açıkladı", dek: "Veriler yayımlandı.", bodyMarkdown: body,
+    keyFacts: [{ text: "Rezerv", quoteFromSource: "Merkez Bankası rezerv verilerini açıkladı." }], tickers: [], tags: [], numbersUsed: [] };
+  it("kısa belgeye kısa haber: geçer", () => expect(runEditRules(art, shortDoc, { importance: 2, reviewThreshold: 4 }).decision).toBe("publish"));
+  it("uzun belgede 120 kelime şartı sürer", () => {
+    const longDoc = Array.from({ length: 80 }, () => "Merkez Bankası rezerv verilerini açıkladı.").join(" ");
+    expect(runEditRules(art, longDoc, { importance: 2, reviewThreshold: 4 }).reasons.join()).toMatch(/uzunluk/);
+  });
+});

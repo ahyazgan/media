@@ -18,7 +18,8 @@ export async function writeDetailed(input: WriteInput): Promise<Detailed<WriteOu
   const t0 = Date.now();
   const res = await client.messages.parse({
     model,
-    max_tokens: 4096,
+    // Sonnet 5 varsayılan olarak düşünür; düşünme token'ları bu sınırdan yer. 4096 canlı testte 4/22 yazımı yarıda kesti.
+    max_tokens: 16_000,
     system: [{ type: "text", text: WRITE_SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: [{
       role: "user",

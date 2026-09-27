@@ -36,3 +36,47 @@ describe("numericGroundingCheck", () => {
     expect(r.missing).toEqual(["15 Kasım 2026"]); // tarih kanonik güne göre denetlenir
   });
 });
+
+describe("canlı değerlendirmede çıkan biçimler (2026-09-27)", () => {
+  it("Türkçe büyüklük sözcükleri değerle eşleşir", () => {
+    const tuik = "işsiz sayısı 47 bin kişi azalarak 2 milyon 986 bin kişi oldu. GSYH 14 trilyon 872 milyar 415 milyon TL oldu.";
+    expect(numericGroundingCheck(["2 milyon 986 bin", "14 trilyon 872 milyar 415 milyon TL", "47 bin"], "", tuik).missing).toEqual([]);
+    const kap = "250.000 adet pay geri alındı. Toplam tutar 10.380.000 TL'dir.";
+    expect(numericGroundingCheck(["250 bin", "10,38 milyon"], "250 bin pay için 10,38 milyon TL ödendi.", kap).missing).toEqual([]);
+  });
+  it("yuvarlama son basamağın yarısı kadar tolere edilir, fazlası reddedilir", () => {
+    const doc = "işsiz sayısı 2 milyon 986 bin kişi oldu.";
+    expect(numericGroundingCheck(["yaklaşık 3 milyon"], "", doc).ok).toBe(true);   // 2,986 → 3 (birim 1 milyon)
+    expect(numericGroundingCheck(["2,9 milyon"], "", doc).ok).toBe(false);        // 2,986 ≠ 2,9 (birim 100 bin)
+    expect(numericGroundingCheck(["5 milyon"], "", doc).ok).toBe(false);
+  });
+  it("saat ve yılsız tarih", () => {
+    const doc = "Genel Kurul Tarihi: 20.10.2026\nGenel Kurul Saati: 10:30\nBülten saat 10.00'da yayımlanır.";
+    const r = numericGroundingCheck(["20 Ekim", "10:30", "10:00"], "Toplantı 20 Ekim'de saat 10:30'da yapılacak.", doc);
+    expect(r.missing).toEqual([]);
+    expect(numericGroundingCheck(["11:15"], "", doc).missing).toEqual(["11:15"]);
+    expect(numericGroundingCheck(["21 Ekim"], "", doc).missing).toEqual(["21 Ekim"]);
+  });
+});
+
+describe("canlı değerlendirmede çıkan biçimler (2026-09-27)", () => {
+  it("Türkçe büyüklük sözcükleri değerle eşleşir", () => {
+    const tuik = "işsiz sayısı 47 bin kişi azalarak 2 milyon 986 bin kişi oldu. GSYH 14 trilyon 872 milyar 415 milyon TL oldu.";
+    expect(numericGroundingCheck(["2 milyon 986 bin", "14 trilyon 872 milyar 415 milyon TL", "47 bin"], "", tuik).missing).toEqual([]);
+    const kap = "250.000 adet pay geri alındı. Toplam tutar 10.380.000 TL'dir.";
+    expect(numericGroundingCheck(["250 bin", "10,38 milyon"], "250 bin pay için 10,38 milyon TL ödendi.", kap).missing).toEqual([]);
+  });
+  it("yuvarlama son basamağın yarısı kadar tolere edilir, fazlası reddedilir", () => {
+    const doc = "işsiz sayısı 2 milyon 986 bin kişi oldu.";
+    expect(numericGroundingCheck(["yaklaşık 3 milyon"], "", doc).ok).toBe(true);
+    expect(numericGroundingCheck(["2,9 milyon"], "", doc).ok).toBe(false);
+    expect(numericGroundingCheck(["5 milyon"], "", doc).ok).toBe(false);
+  });
+  it("saat ve yılsız tarih", () => {
+    const doc = "Genel Kurul Tarihi: 20.10.2026\nGenel Kurul Saati: 10:30\nBülten saat 10.00'da yayımlanır.";
+    const r = numericGroundingCheck(["20 Ekim", "10:30", "10:00"], "Toplantı 20 Ekim'de saat 10:30'da yapılacak.", doc);
+    expect(r.missing).toEqual([]);
+    expect(numericGroundingCheck(["11:15"], "", doc).missing).toEqual(["11:15"]);
+    expect(numericGroundingCheck(["21 Ekim"], "", doc).missing).toEqual(["21 Ekim"]);
+  });
+});

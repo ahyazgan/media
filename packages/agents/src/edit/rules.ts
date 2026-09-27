@@ -43,7 +43,9 @@ export function wordCount(s: string): number {
  */
 export function runEditRules(article: WriteOutput, documentText: string, opts: EditOptions): EditResult {
   const reasons: string[] = [];
-  const minWords = opts.minWords ?? 120;
+  // Şartname 120 kelime ister; ama 150 kelimelik bir duyurudan 120 kelimelik haber ancak dolguyla çıkar.
+  // Alt sınır belge uzunluğunun yarısı: en az 60, en çok 120 (canlı testte TCMB rezerv duyurusu 103 kelimede takıldı).
+  const minWords = opts.minWords ?? Math.min(120, Math.max(60, Math.round(wordCount(documentText) / 2)));
   const maxWords = opts.maxWords ?? 350;
   const maxTitle = opts.maxTitleChars ?? 70;
 

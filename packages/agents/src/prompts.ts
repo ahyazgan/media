@@ -19,6 +19,7 @@ Kategoriler:
 1 = teknik/rutin (isim değişikliği, düzeltme, adres)
 
 isNews: Ekonomi okuru için haber değeri varsa true. Üniversite iç yönetmelikleri, personel görevde yükselme yönetmelikleri, adres/unvan değişiklikleri, düzeltmeler → false.
+Kurul kararları (KGK, SPK, BDDK, EPDK, Rekabet Kurulu), tebliğler ve yönetmelikler bir sektörü ya da meslek grubunu bağlayan bir kural, süre veya yükümlülük getiriyor ya da değiştiriyorsa haberdir (isNews true), metin kısa olsa bile. Örnek: bağımsız denetçilere tanınan bir muafiyet süresinin uzatılması.
 
 KAP bildirimleri (Kaynak: kap) için:
 - Kategori genellikle borsa. entities.tickers alanına başlıkta/belgede geçen Borsa İstanbul kodlarını yaz.
