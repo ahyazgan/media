@@ -21,6 +21,14 @@ export const fakeAgents: Agents = {
         summaryHint: "Sahte ajan: KAP bildirimi.",
       };
     }
+    if (sourceId === "tcmb" || sourceId === "tuik") {
+      const high = /faiz|para politikası kurulu|tüketici fiyat|enflasyon/.test(t);
+      return {
+        category: "makro", importance: high ? 5 : /gayrisafi|işgücü|işsizlik|dış ticaret/.test(t) ? 4 : 3,
+        entities: { companies: [], tickers: [], institutions: [sourceId === "tcmb" ? "TCMB" : "TÜİK"] },
+        isNews: true, summaryHint: "Sahte ajan: makro veri.",
+      };
+    }
     const isUni = /üniversite/.test(t);
     return {
       category: "mevzuat", importance: isUni ? 2 : 3,
@@ -41,7 +49,7 @@ export const fakeAgents: Agents = {
       dek: picked[1] ?? firstQuote,
       bodyMarkdown,
       keyFacts: [{ text: firstQuote, quoteFromSource: firstQuote }],
-      tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : ["resmi-gazete", "mevzuat"],
+      tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : sourceId === "tcmb" || sourceId === "tuik" ? [sourceId, "makro"] : ["resmi-gazete", "mevzuat"],
       numbersUsed: extractNumbers(bodyMarkdown),
     };
   },

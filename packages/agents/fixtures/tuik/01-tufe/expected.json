@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge (gerçek TÜİK verisi değildir). TÜFE: makro, importance 5 → review. Yüzdeler doğrudan belgeden.",
+  "classify": { "category": ["makro"], "importanceMin": 4, "isNews": true },
+  "mustGround": ["2,1", "21,6", "28,4", "33,7", "12,3", "44,1", "39,5", "30,8", "6,4", "0,3", "1,9", "27,1", "1,8", "26,5", "3 Kasım 2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre", "tahmin"]
+}

@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Döviz pozisyonu düzenlemesi + rezerv verisi: bankacılık ya da makro; importance 3–4.",
+  "classify": { "category": ["makro", "bankacilik"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["5", "10", "1 Aralık 2026", "20 Kasım 2026", "3,2", "178,6", "71,4"],
+  "mustNotContain": ["bekleniyor", "olabilir", "muhtemel"]
+}

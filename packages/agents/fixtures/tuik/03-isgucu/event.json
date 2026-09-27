@@ -1,0 +1,10 @@
+{
+  "sourceId": "tuik",
+  "sourceName": "Türkiye İstatistik Kurumu",
+  "externalId": "isgucu-istatistikleri-agustos-2026-53930-b3c4d5e6",
+  "title": "İşgücü İstatistikleri, Ağustos 2026",
+  "url": "https://data.tuik.gov.tr/Bulten/Index?p=Isgucu-Istatistikleri-Agustos-2026-53930",
+  "publishedAt": "2026-10-15T07:00:00.000Z",
+  "payload": { "section": "isgucu", "sectionLabel": "İşgücü", "feedId": "isgucu-istatistikleri-agustos-2026-53930-b3c4d5e6" },
+  "synthetic": true
+}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdSlot, ArticleListItem, GazetteList, HeroArticle, MacroCalendar } from "@kaynak/ui";
 import { KapFeedLive } from "@/components/KapFeedLive";
 import { SOURCE_LABELS } from "@/lib/format";
-import { gazetteForDate, kapFeed, latestArticles, latestGazetteDate } from "@/lib/queries";
+import { calendarUpcoming, gazetteForDate, kapFeed, latestArticles, latestGazetteDate } from "@/lib/queries";
 import { dateLabel, todayIso } from "@/lib/format";
 
 export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
@@ -10,7 +10,7 @@ export const revalidate = 60; // şartname: ana sayfa ISR 60 sn
 const NextLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => <Link href={href} className={className}>{children}</Link>;
 
 export default async function HomePage() {
-  const [items, latestDate, feed] = await Promise.all([latestArticles(24), latestGazetteDate(), kapFeed(12)]);
+  const [items, latestDate, feed, calendar] = await Promise.all([latestArticles(24), latestGazetteDate(), kapFeed(12), calendarUpcoming(30, 40)]);
   const gazDate = latestDate ?? todayIso();
   const gazette = await gazetteForDate(gazDate);
   const [hero, ...rest] = items;
@@ -45,7 +45,7 @@ export default async function HomePage() {
           <GazetteList compact entries={gazette} dateLabel={dateLabel(gazDate)} issueNo={gazette[0]?.issueNo} LinkComponent={NextLink} />
           <Link href={`/resmi-gazete/${gazDate}`} className="k-btn k-btn--ghost" style={{ justifySelf: "start" }}>Günün tamamı →</Link>
           <KapFeedLive initial={feed} />
-          <MacroCalendar />
+          <MacroCalendar items={calendar} limit={6} LinkComponent={NextLink} />
           <AdSlot id="home-rail" size="300x600" mobileSize="300x250" />
         </aside>
       </div>

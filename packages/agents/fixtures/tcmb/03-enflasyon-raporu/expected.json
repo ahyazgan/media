@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Enflasyon Raporu: kurumun kendi tahminleri belgede geçtiği için aktarılabilir; yazar kendi tahminini eklememeli (\"tahmin edilmiştir\" alıntı olarak belgede var, bu yüzden mustNotContain'e 'tahmin' konmadı).",
+  "classify": { "category": ["makro"], "importanceMin": 4, "isNews": true },
+  "mustGround": ["24", "28", "26", "16", "9", "6 Kasım 2026", "5 Şubat 2027"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}

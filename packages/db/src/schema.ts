@@ -105,6 +105,7 @@ export const companyEvents = pgTable("company_events", {
   index("company_events_code_created").on(t.kapCode, t.createdAt),
 ]);
 
+/** Makro takvim (TCMB/TÜİK). (institution, title, scheduledAt) tekildir: takvim senkronu tekrar tekrar koşabilir. */
 export const calendarEvents = pgTable("calendar_events", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
   institution: text("institution").notNull(),
@@ -112,7 +113,11 @@ export const calendarEvents = pgTable("calendar_events", {
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   sourceUrl: text("source_url"),
   articleId: text("article_id").references(() => articles.id),
-}, (t) => [index("calendar_events_scheduled").on(t.scheduledAt)]);
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("calendar_events_scheduled").on(t.scheduledAt),
+  uniqueIndex("calendar_events_unique").on(t.institution, t.title, t.scheduledAt),
+]);
 
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -122,13 +127,16 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   consentAt: timestamp("consent_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint)]);
 
+/** Sabah bülteni aboneleri: çift onay (confirmedAt) ve tek tıkla iptal için `token`; KVKK açık rıza `consentAt`. */
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull(),
+  token: text("token").notNull().default(sql`gen_random_uuid()`),
   consentAt: timestamp("consent_at", { withTimezone: true }).notNull().defaultNow(),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
-}, (t) => [uniqueIndex("newsletter_subscribers_email").on(t.email)]);
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+}, (t) => [uniqueIndex("newsletter_subscribers_email").on(t.email), uniqueIndex("newsletter_subscribers_token").on(t.token)]);
 
 export const reviewQueue = pgTable("review_queue", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -156,4 +164,7 @@ export type DocumentRow = typeof documents.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type NewArticle = typeof articles.$inferInsert;
 export type Company = typeof companies.$inferSelect;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type CompanyEvent = typeof companyEvents.$inferSelect;

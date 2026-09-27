@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge (gerçek PPK kararı değildir; oranlar uydurmadır). Faiz kararı: makro, importance 5 → review kuyruğu.",
+  "classify": { "category": ["makro"], "importanceMin": 4, "isNews": true },
+  "mustGround": ["36,5", "35", "38", "33,5", "2,1", "28,4", "29 Ekim 2026", "10 Aralık 2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre", "tahmin"]
+}

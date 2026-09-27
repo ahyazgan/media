@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>TÜİK Haber Bültenleri</title>
+  <entry>
+    <title>Tüketici Fiyat Endeksi, Eylül 2026</title>
+    <link href="https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi-Eylul-2026-53912" />
+    <id>https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi-Eylul-2026-53912</id>
+    <published>2026-10-05T10:00:00+03:00</published>
+    <summary>TÜFE aylık yüzde 2,1, yıllık yüzde 28,4 arttı.</summary>
+  </entry>
+  <entry>
+    <title>Dönemsel Gayrisafi Yurt İçi Hasıla, II. Çeyrek: Nisan - Haziran, 2026</title>
+    <link href="https://data.tuik.gov.tr/Bulten/Index?p=Donemsel-Gayrisafi-Yurt-Ici-Hasila-II.-Ceyrek:-Nisan---Haziran,-2026-53890" />
+    <id>https://data.tuik.gov.tr/Bulten/Index?p=Donemsel-Gayrisafi-Yurt-Ici-Hasila-II.-Ceyrek:-Nisan---Haziran,-2026-53890</id>
+    <published>2026-09-01T10:00:00+03:00</published>
+  </entry>
+  <entry>
+    <title>Consumer Price Index, September 2026</title>
+    <link href="https://data.tuik.gov.tr/en/Bulten/Index?p=Consumer-Price-Index-September-2026-53912" />
+    <id>https://data.tuik.gov.tr/en/Bulten/Index?p=Consumer-Price-Index-September-2026-53912</id>
+    <published>2026-10-05T10:00:00+03:00</published>
+  </entry>
+</feed>

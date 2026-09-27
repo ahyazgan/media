@@ -1,5 +1,5 @@
 /**
- * Faz 3 bileşenlerinin yer tutucuları (KapFeed Faz 2 ile KapFeed.tsx'e taşındı). Arayüzleri şimdiden sabitlenir, veri bağlantısı ilgili fazda gelir.
+ * MarketTicker/BreakingBar yer tutucuları (Faz 5), MacroCalendar (Faz 3) ve TabBar. InstallBanner/CookieBar pwa.tsx'te.
  * Hepsi /_dev/ui sayfasında listelenir.
  */
 import type { ReactNode } from "react";
@@ -29,19 +29,49 @@ export function BreakingBar({ text, href }: { text?: string; href?: string }) {
   );
 }
 
-export function MacroCalendar({ items = [] }: { items?: { when: string; institution: string; title: string }[] }) {
-  return (
-    <section className="k-cal">
-      <header className="k-cal__h"><span className="k-label" style={{ color: "var(--accent-2)" }}>Makro takvim</span></header>
-      {items.length === 0 && <p className="k-muted" style={{ fontSize: 14 }}>TCMB ve TÜİK takvimi Faz 3'te devreye girer.</p>}
-      <ul className="k-cal__list">{items.map((i, k) => <li key={k}><time>{i.when}</time> <span className="k-muted">{i.institution}</span> {i.title}</li>)}</ul>
-      <style>{`.k-cal__h{border-bottom:2px solid var(--accent-2);padding-bottom:6px;margin-bottom:10px}.k-cal__list{list-style:none;padding:0;margin:0;font-size:14px}.k-cal__list li{padding:6px 0;border-bottom:1px dashed var(--line)}.k-cal__list time{font-variant-numeric:tabular-nums;margin-right:6px}`}</style>
-    </section>
-  );
+export interface MacroCalendarItem {
+  id: string;
+  /** ISO zaman */
+  scheduledAt: string;
+  institution: string;      // tcmb | tuik
+  title: string;
+  /** Yayınlandıysa haber bağlantısı */
+  articleHref?: string | null;
+  sourceUrl?: string | null;
+}
+const INSTITUTION_LABEL: Record<string, string> = { tcmb: "TCMB", tuik: "TÜİK" };
+export const institutionLabel = (id: string) => INSTITUTION_LABEL[id] ?? id.toUpperCase();
+
+export function fmtCalendarWhen(iso: string, withDate = true): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("tr-TR", withDate
+    ? { timeZone: "Europe/Istanbul", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
+    : { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" }).format(d);
 }
 
-export function InstallBanner({ children }: { children?: ReactNode }) {
-  return <div className="k-install" hidden>{children ?? "Ana ekrana ekleyin"}</div>;
+type LinkC = (props: { href: string; className?: string; children: ReactNode }) => ReactNode;
+const A: LinkC = ({ href, className, children }) => <a href={href} className={className}>{children}</a>;
+
+/** Makro takvim (şartname §6.2): ana sayfada yaklaşan 5 girdi, /takvim'de 30 gün. Yayınlanmış veri habere bağlanır. */
+export function MacroCalendar({ items = [], LinkComponent = A, limit, moreHref = "/takvim" }: { items?: MacroCalendarItem[]; LinkComponent?: LinkC; limit?: number; moreHref?: string | null }) {
+  const shown = limit ? items.slice(0, limit) : items;
+  return (
+    <section className="k-cal">
+      <header className="k-cal__h"><LinkComponent href="/takvim" className="k-label" >{"Makro takvim"}</LinkComponent></header>
+      {shown.length === 0 && <p className="k-muted" style={{ fontSize: 14 }}>Önümüzdeki günlerde planlı veri açıklaması yok.</p>}
+      <ul className="k-cal__list">
+        {shown.map((i) => (
+          <li key={i.id} className={i.articleHref ? "k-cal__i k-cal__i--done" : "k-cal__i"}>
+            <time dateTime={i.scheduledAt}>{fmtCalendarWhen(i.scheduledAt)}</time>
+            <span className="k-cal__inst">{institutionLabel(i.institution)}</span>
+            {i.articleHref ? <LinkComponent href={i.articleHref} className="k-cal__t k-cal__t--news">{i.title}</LinkComponent> : <span className="k-cal__t">{i.title}</span>}
+          </li>
+        ))}
+      </ul>
+      {moreHref && items.length > shown.length && <LinkComponent href={moreHref} className="k-cal__more">Takvimin tamamı →</LinkComponent>}
+      <style>{`.k-cal__h{border-bottom:2px solid var(--accent-2);padding-bottom:6px;margin-bottom:10px}.k-cal__h .k-label{color:var(--accent-2)}.k-cal__list{list-style:none;padding:0;margin:0;font-size:14px}.k-cal__i{padding:6px 0;border-bottom:1px dashed var(--line);display:grid;grid-template-columns:auto auto 1fr;gap:8px;align-items:baseline}.k-cal__i time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;white-space:nowrap}.k-cal__inst{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2)}.k-cal__t{color:var(--body)}.k-cal__t--news{font-weight:600;color:var(--ink)}.k-cal__more{display:inline-block;margin-top:8px;font-size:13px;color:var(--muted)}`}</style>
+    </section>
+  );
 }
 
 export function TabBar({ items = DEFAULT_TABS }: { items?: { href: string; label: string }[] }) {
@@ -53,13 +83,3 @@ export function TabBar({ items = DEFAULT_TABS }: { items?: { href: string; label
   );
 }
 const DEFAULT_TABS = [{ href: "/", label: "Akış" }, { href: "/resmi-gazete", label: "Gazete" }, { href: "/sirket", label: "Şirketler" }, { href: "/takvim", label: "Takvim" }];
-
-export function CookieBar() {
-  return (
-    <div className="k-cookie" role="dialog" aria-label="Çerez tercihleri" hidden>
-      <p>Zorunlu çerezler dışında çerez kullanmıyoruz. Reklam çerezleri yalnızca onayınızla yüklenir.</p>
-      <button className="k-btn k-btn--ghost" type="button">Sadece zorunlu</button>
-      <button className="k-btn" type="button">Kabul et</button>
-    </div>
-  );
-}

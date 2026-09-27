@@ -1,0 +1,10 @@
+{
+  "sourceId": "tuik",
+  "sourceName": "Türkiye İstatistik Kurumu",
+  "externalId": "dis-ticaret-istatistikleri-eylul-2026-53950-c4d5e6f7",
+  "title": "Dış Ticaret İstatistikleri, Eylül 2026",
+  "url": "https://data.tuik.gov.tr/Bulten/Index?p=Dis-Ticaret-Istatistikleri-Eylul-2026-53950",
+  "publishedAt": "2026-10-30T07:00:00.000Z",
+  "payload": { "section": "dis-ticaret", "sectionLabel": "Dış Ticaret", "feedId": "dis-ticaret-istatistikleri-eylul-2026-53950-c4d5e6f7" },
+  "synthetic": true
+}

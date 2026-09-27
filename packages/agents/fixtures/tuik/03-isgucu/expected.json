@@ -1,0 +1,30 @@
+{
+  "note": "Sentetik belge. İşgücü verisi: makro, importance 4. Belgede 'tahmin edildi' TÜİK'in resmi ifadesidir; yazarın kendi tahmini yasak olduğundan mustNotContain'de 'tahmin' yok, 'bekleniyor' var. Sözlü büyüklükler ('2 milyon 986 bin') tek jeton sayılmaz; mustGround'da rakam parçaları verilir.",
+  "classify": {
+    "category": [
+      "makro"
+    ],
+    "importanceMin": 3,
+    "isNews": true
+  },
+  "mustGround": [
+    "8,4",
+    "47",
+    "986",
+    "0,2",
+    "6,9",
+    "11,3",
+    "112",
+    "645",
+    "49,6",
+    "54,2",
+    "15,1",
+    "27,3",
+    "44,1"
+  ],
+  "mustNotContain": [
+    "bekleniyor",
+    "olabilir",
+    "uzmanlara göre"
+  ]
+}

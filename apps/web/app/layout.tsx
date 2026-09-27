@@ -4,6 +4,7 @@ import Link from "next/link";
 import "@kaynak/ui/tokens.css";
 import "./globals.css";
 import { Masthead, TabBar } from "@kaynak/ui";
+import { PwaClient } from "@/components/PwaClient";
 import { todayLabel } from "@/lib/format";
 
 const fraunces = Fraunces({ subsets: ["latin", "latin-ext"], weight: ["600", "800"], variable: "--font-fraunces", display: "swap" });
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   description: "Resmi Gazete, KAP, TCMB ve TÜİK bildirimlerini dakikalar içinde doğrulanmış, belgeye linkli habere çeviren ekonomi haber sitesi.",
   applicationName: "Kaynak",
   robots: { index: true, follow: true },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Kaynak" },
+  icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }] },
+  alternates: { types: { "application/rss+xml": `${SITE}/rss.xml` } },
 };
 
 export const viewport: Viewport = { themeColor: "#E0187B", viewportFit: "cover", width: "device-width", initialScale: 1 };
@@ -36,12 +41,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p className="k-footer__disclaimer"><b>Yatırım tavsiyesi değildir.</b> Kaynak'taki haberler resmi belgelerden otomatik üretilir ve editör kurallarından geçer; yorum, tahmin veya öneri içermez.</p>
             <nav className="k-footer__nav">
               <Link href="/kunye">Künye</Link><Link href="/iletisim">İletişim</Link><Link href="/duzeltme-politikasi">Düzeltme politikası</Link>
-              <Link href="/kvkk">KVKK</Link><Link href="/cerez-politikasi">Çerez politikası</Link><Link href="/reklam">Reklam</Link><Link href="/rss.xml">RSS</Link>
+              <Link href="/kvkk">KVKK</Link><Link href="/cerez-politikasi">Çerez politikası</Link><Link href="/reklam">Reklam</Link><Link href="/bulten">Sabah bülteni</Link><Link href="/rss.xml">RSS</Link>
             </nav>
             <p className="k-muted" style={{ fontSize: 12 }}>© {new Date().getFullYear()} Kaynak. Resmi Gazete metinleri FSEK m.31 gereği telif korumasında değildir.</p>
           </div>
         </footer>
         <TabBar />
+        <PwaClient />
       </body>
     </html>
   );

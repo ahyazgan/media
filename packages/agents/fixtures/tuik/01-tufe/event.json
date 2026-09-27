@@ -1,0 +1,10 @@
+{
+  "sourceId": "tuik",
+  "sourceName": "Türkiye İstatistik Kurumu",
+  "externalId": "tuketici-fiyat-endeksi-eylul-2026-53912-f1a2b3c4",
+  "title": "Tüketici Fiyat Endeksi, Eylül 2026",
+  "url": "https://data.tuik.gov.tr/Bulten/Index?p=Tuketici-Fiyat-Endeksi-Eylul-2026-53912",
+  "publishedAt": "2026-10-05T07:00:00.000Z",
+  "payload": { "section": "fiyat", "sectionLabel": "Fiyat İstatistikleri", "feedId": "tuketici-fiyat-endeksi-eylul-2026-53912-f1a2b3c4" },
+  "synthetic": true
+}

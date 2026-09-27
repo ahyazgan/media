@@ -10,3 +10,7 @@ data/
 storage/
 coverage/
 .turbo/
+# Serwist çıktıları (next build üretir)
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/swe-worker-*.js

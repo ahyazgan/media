@@ -1,4 +1,4 @@
-import { AdSlot, ArticleListItem, BreakingBar, CompanyCard, CookieBar, GazetteList, HeroArticle, InstallBanner, KapFeed, KeyFacts, MacroCalendar, MarketTicker, SourceBox, TabBar } from "@kaynak/ui";
+import { AdSlot, ArticleListItem, BreakingBar, CompanyCard, GazetteList, HeroArticle, InstallBanner, KapFeed, KeyFacts, MacroCalendar, MarketTicker, SourceBox } from "@kaynak/ui";
 
 export const metadata = { title: "UI bileşenleri", robots: { index: false } };
 
@@ -26,9 +26,12 @@ export default function DevUi() {
         { id: "2", publishedAt: new Date(Date.now() - 3_600_000).toISOString(), code: "MISAL", company: "MİSAL GIDA", title: "Şirket Genel Bilgi Formu Güncellemesi", href: "#", isNews: false },
       ]} /></Block>
       <Block name="CompanyCard"><CompanyCard c={{ kapCode: "ORNEK", name: "ÖRNEK ENERJİ A.Ş.", sector: "Enerji", disclosureCount: 12, newsCount: 4 }} /></Block>
-      <Block name="MacroCalendar"><MacroCalendar /></Block>
+      <Block name="MacroCalendar"><MacroCalendar items={[
+        { id: "1", scheduledAt: new Date(Date.now() + 3_600_000).toISOString(), institution: "tuik", title: "Tüketici Fiyat Endeksi" },
+        { id: "2", scheduledAt: new Date(Date.now() + 86_400_000).toISOString(), institution: "tcmb", title: "PPK Toplantısı ve Faiz Kararı", articleHref: "#" },
+      ]} /></Block>
       <Block name="AdSlot"><AdSlot id="dev" size="300x250" /></Block>
-      <Block name="InstallBanner / TabBar / CookieBar (gizli, PWA modunda)"><InstallBanner /><TabBar /><CookieBar /></Block>
+      <Block name="InstallBanner (iOS modu; sayfa altına sabitlenir)"><InstallBanner mode="ios" /></Block>
     </div>
   );
 }

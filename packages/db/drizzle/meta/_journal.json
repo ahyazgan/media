@@ -15,6 +15,13 @@
       "when": 1790491994939,
       "tag": "0001_kap_companies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790493393583,
+      "tag": "0002_calendar_newsletter",
+      "breakpoints": true
     }
   ]
 }

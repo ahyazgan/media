@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Sanayi üretimi: makro, importance 3.",
+  "classify": { "category": ["makro"], "importanceMin": 2, "isNews": true },
+  "mustGround": ["0,8", "158,2", "1,4", "1,1", "0,5", "3,7", "2,9", "4,1", "0,6", "2,6", "1,2", "0,9", "10 Kasım 2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}

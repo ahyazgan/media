@@ -6,3 +6,8 @@ export { loadEnv, type Env } from "./env.js";
 export { DiskStore, MemoryStore, storageKeyFor, type BlobStore } from "./storage.js";
 export { liveAgents } from "./liveAgents.js";
 export { fakeAgents } from "./fakeAgents.js";
+export { syncCalendar, upcomingEvents, isCalendarHot, linkCalendarEvent } from "./calendar.js";
+export { createMailer, type Mailer, type MailMessage } from "./mail.js";
+export { composeBulletin, renderBulletin, sendBulletin, msUntilNext, istanbulDate, type BulletinData } from "./newsletter.js";
+export { createPushSender, sendPushForArticle, pushPayload, vapidConfigured, type PushSender } from "./push.js";
+export type { PublishHooks } from "./publish.js";

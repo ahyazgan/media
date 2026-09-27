@@ -1,14 +1,32 @@
-import type { Article } from "@kaynak/db";
+import type { Article, Db } from "@kaynak/db";
 import type { Env } from "./env.js";
+import { sendPushForArticle, type PushSender } from "./push.js";
 
-/** publish sonrası: ISR revalidate, IndexNow (Faz 4), Telegram (Faz 3). Hiçbiri pipeline'ı düşürmez. */
-export function makeOnPublished(env: Env, fetchImpl: typeof fetch = fetch) {
+export interface PublishHooks {
+  fetchImpl?: typeof fetch;
+  /** Web push için gerekli (abonelikler DB'de). Verilmezse push atlanır. */
+  db?: Db;
+  push?: PushSender;
+  log?: (msg: string, meta?: Record<string, unknown>) => void;
+}
+
+/**
+ * publish sonrası: ISR revalidate, Telegram (her haber), web push (importance >= PUSH_MIN_IMPORTANCE, kategori aboneliğine göre),
+ * IndexNow (Faz 4). Hiçbiri pipeline'ı düşürmez; hepsi paralel ve hataları yutulup loglanır.
+ */
+export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {}) {
+  const h: PublishHooks = typeof hooks === "function" ? { fetchImpl: hooks } : hooks;
+  const fetchImpl = h.fetchImpl ?? fetch;
   return async (a: Article, ctx?: { sourceId: string }): Promise<void> => {
-    await Promise.allSettled([
+    const jobs: Promise<unknown>[] = [
       revalidate(env, a, fetchImpl, ctx?.sourceId),
       telegram(env, a, fetchImpl),
       indexNow(env, a, fetchImpl),
-    ]);
+    ];
+    if (h.db && h.push && a.importance >= env.PUSH_MIN_IMPORTANCE) {
+      jobs.push(sendPushForArticle(h.db, h.push, a, env.SITE_URL, h.log).catch((e) => console.warn("[publish] push failed:", (e as Error).message)));
+    }
+    await Promise.allSettled(jobs);
   };
 }
 
@@ -18,6 +36,7 @@ export function pathsFor(a: Article, sourceId?: string): string[] {
   if (!sourceId || sourceId === "resmi-gazete") paths.push(`/resmi-gazete/${d.toISOString().slice(0, 10)}`);
   for (const t of a.tickers) paths.push(`/sirket/${t.toLowerCase()}`);
   if (a.tickers.length) paths.push("/sirket");
+  if (sourceId === "tcmb" || sourceId === "tuik") paths.push("/takvim");
   return paths;
 }
 
@@ -46,4 +65,4 @@ async function indexNow(env: Env, a: Article, f: typeof fetch) {
     .catch((e) => console.warn("[publish] indexnow failed:", (e as Error).message));
 }
 
-const escapeHtml = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
+export const escapeHtml = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);

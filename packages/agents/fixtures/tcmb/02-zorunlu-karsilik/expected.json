@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Zorunlu karşılık düzenlemesi: bankacılık ya da makro kategorisi kabul edilir; bankaları ilgilendirir, importance 3–4.",
+  "classify": { "category": ["makro", "bankacilik"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["17", "15", "10", "8", "30", "180", "30 Ekim 2026", "13 Kasım 2026", "24 Ekim 2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "muhtemel"]
+}

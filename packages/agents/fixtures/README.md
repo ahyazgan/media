@@ -24,6 +24,13 @@ Gerçek kopyalarla değiştirmek için:
 
 Rutin bildirim örneği (`06-genel-bilgi-formu`) `isNews=false` beklentisi taşır: şirket sayfasında bildirim geçmişinde görünür, haber olmaz.
 
+## tcmb/ ve tuik/
+
+**Sentetik** belgeler: gerçek TCMB/TÜİK bültenlerinin biçimi (sayı, tarih, başlık cümlesi, alt gruplar) yeniden üretilmiş,
+oranlar ve tutarlar uydurmadır (`"synthetic": true`). Kurumlar gerçektir ama içerik gerçek bir yayına karşılık gelmez;
+canlı testten önce gerçek bültenlerle değiştirin (bülten sayfası → `documentToText` → `document.txt`). TCMB "tahmin edilmiştir" ve
+TÜİK "tahmin edildi" ifadeleri kurumun resmi dilidir; yazar ajanının yasaklı kalıp listesi yalnızca haberin kendi cümlelerine uygulanır.
+
 ## Testler
 
 - `pnpm test:agents` → çevrimdışı testler her zaman koşar (kural motoru, bozuk fixture reddi, fixture bütünlüğü; her kaynak için en az 5 örnek).

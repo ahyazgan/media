@@ -1,0 +1,30 @@
+{
+  "note": "Sentetik belge. Dış ticaret: makro, importance 3–4. Sözlü büyüklükler ('2 milyon 986 bin') tek jeton sayılmaz; mustGround'da rakam parçaları verilir.",
+  "classify": {
+    "category": [
+      "makro"
+    ],
+    "importanceMin": 3,
+    "isNews": true
+  },
+  "mustGround": [
+    "4,8",
+    "2,3",
+    "412",
+    "105",
+    "26,1",
+    "693",
+    "77,6",
+    "83,3",
+    "3,9",
+    "1,2",
+    "6,4",
+    "5,2",
+    "0,9"
+  ],
+  "mustNotContain": [
+    "bekleniyor",
+    "olabilir",
+    "uzmanlara göre"
+  ]
+}

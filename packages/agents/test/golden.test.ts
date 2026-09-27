@@ -7,7 +7,7 @@ import { hasApiKey } from "../src/client.js";
 
 const FIXTURES = new URL("../fixtures/", import.meta.url);
 const ROOT = new URL("resmi-gazete/", FIXTURES);
-const SOURCES = ["resmi-gazete", "kap"] as const;
+const SOURCES = ["resmi-gazete", "kap", "tcmb", "tuik"] as const;
 type Expected = {
   classify: { category: string[]; importanceMin?: number; importanceMax?: number; isNews: boolean | null };
   mustGround: string[]; mustNotContain: string[];

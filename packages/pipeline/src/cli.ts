@@ -6,12 +6,15 @@
  *   pnpm pipeline:run -- --date ... --dry-agents    # gerçek belgeler, sahte ajanlar (API anahtarı yok)
  *   pnpm pipeline:run -- --source kap               # KAP: son bildirimleri çek ve işle (--since ile pencere)
  *   pnpm pipeline:run -- --source kap --fixture     # KAP kuru çalıştırma (sentetik fixture)
+ *   pnpm pipeline:run -- --source tcmb|tuik [--fixture]   # TCMB/TÜİK beslemesi
+ *   pnpm pipeline:run -- --calendar [--fixture]     # TCMB/TÜİK takvimini calendar_events'e senkronla
+ *   pnpm pipeline:run -- --bulletin [--dry]         # sabah bültenini gönder (--dry: yalnızca konsola yaz)
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
-import { KapAdapter, ResmiGazeteAdapter, type RawEvent, type SourceAdapter } from "@kaynak/sources";
+import { importCalendars, KapAdapter, parseTcmbCalendar, parseTuikCalendar, ResmiGazeteAdapter, TcmbAdapter, TuikAdapter, type RawEvent, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import { loadEnv } from "./env.js";
 import { DiskStore } from "./storage.js";
@@ -19,6 +22,10 @@ import { ingestEvents, processPending, SOURCE_NAMES, type Agents } from "./pipel
 import { makeOnPublished } from "./publish.js";
 import { liveAgents } from "./liveAgents.js";
 import { fakeAgents } from "./fakeAgents.js";
+import { syncCalendar } from "./calendar.js";
+import { createMailer } from "./mail.js";
+import { composeBulletin, renderBulletin, sendBulletin } from "./newsletter.js";
+import { createPushSender } from "./push.js";
 
 const args = new Map<string, string>();
 for (let i = 2; i < process.argv.length; i++) {
@@ -30,6 +37,40 @@ const env = loadEnv();
 const handle = await createDb(env.DATABASE_URL);
 await handle.migrate();
 await seed(handle.db);
+
+const log = (m: string, meta?: Record<string, unknown>) => console.log(`[${m}]`, JSON.stringify(meta ?? {}));
+
+// --- Takvim senkronu ---
+if (args.get("calendar") === "true") {
+  let entries;
+  if (args.get("fixture") === "true") {
+    const fx = (f: string) => readFileSync(new URL(`../../sources/fixtures/${f}`, import.meta.url), "utf8");
+    entries = [...parseTuikCalendar(fx("tuik-takvim.html")), ...parseTcmbCalendar(fx("tcmb-ppk-takvim.html"), { year: 2026 })];
+  } else {
+    const r = await importCalendars({ tuikUrl: env.TUIK_CALENDAR_URL, tcmbUrl: env.TCMB_CALENDAR_URL, year: new Date().getFullYear() });
+    for (const e of r.errors) console.warn("[calendar] hata", e);
+    entries = r.entries;
+  }
+  const n = await syncCalendar(handle.db, entries);
+  log("calendar", { parsed: entries.length, inserted: n });
+  await handle.close();
+  process.exit(0);
+}
+
+// --- Sabah bülteni ---
+if (args.get("bulletin") === "true") {
+  if (args.get("dry") === "true") {
+    const data = await composeBulletin(handle.db);
+    const { subject, text } = renderBulletin(data, env.SITE_URL);
+    console.log(subject + "\n\n" + text);
+  } else {
+    const mailer = await createMailer(env);
+    const r = await sendBulletin(handle.db, mailer, env, { log });
+    log("bulletin:done", { transport: mailer.kind, sent: r.sent, failed: r.failed, subscribers: r.subscribers });
+  }
+  await handle.close();
+  process.exit(0);
+}
 
 const useFake = args.get("fixture") === "true" || args.get("dry-agents") === "true" || !hasApiKey();
 if (useFake && !args.has("fixture") && !args.has("dry-agents")) console.warn("[cli] ANTHROPIC_API_KEY yok → sahte ajanlar kullanılıyor (--dry-agents)");
@@ -51,6 +92,20 @@ if (source === "kap") {
     adapter = k;
     events = await k.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
   }
+} else if (source === "tcmb" || source === "tuik") {
+  const a = source === "tcmb" ? new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }) : new TuikAdapter({ feedUrl: env.TUIK_FEED_URL });
+  if (args.get("fixture") === "true") {
+    const xml = readFileSync(new URL(`../../sources/fixtures/${source === "tcmb" ? "tcmb-basin.xml" : "tuik-bulten.xml"}`, import.meta.url), "utf8");
+    events = a.eventsFromXml(xml);
+    // Fixture externalId'leri bağlantı hash'i içerir; agents/fixtures klasörleri feedId ön ekine göre eşlenir
+    const dirs = source === "tcmb" ? { "duy2026-38": "01-ppk-faiz-karari", "duy2026-37": "02-zorunlu-karsilik" } : { "tuketici-fiyat-endeksi": "01-tufe", "donemsel-gayrisafi": "02-gsyh" };
+    const map: Record<string, string> = {};
+    for (const e of events) { const hit = Object.entries(dirs).find(([k]) => e.externalId.startsWith(k)); if (hit) map[e.externalId] = hit[1]; }
+    adapter = fixtureAdapter(a, source, map);
+  } else {
+    adapter = a;
+    events = await a.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
+  }
 } else if (source === "resmi-gazete") {
   const rg = new ResmiGazeteAdapter();
   if (args.get("fixture") === "true") {
@@ -64,7 +119,7 @@ if (source === "kap") {
     else events = await rg.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
   }
 } else {
-  console.error(`bilinmeyen kaynak: ${source} (resmi-gazete | kap)`);
+  console.error(`bilinmeyen kaynak: ${source} (resmi-gazete | kap | tcmb | tuik)`);
   process.exit(1);
 }
 
@@ -73,8 +128,8 @@ console.log(`[cli] ${events.length} event, ${inserted.length} yeni`);
 const outcomes = await processPending({
   db: handle.db, agents, store: new DiskStore(env.STORAGE_DIR), reviewThreshold: env.REVIEW_THRESHOLD,
   sourceNames: SOURCE_NAMES,
-  log: (m, meta) => console.log(`[${m}]`, JSON.stringify(meta)),
-  onPublished: makeOnPublished(env),
+  log,
+  onPublished: makeOnPublished(env, { db: handle.db, push: await createPushSender(env), log }),
 }, adapter);
 const summary = outcomes.reduce<Record<string, number>>((acc, o) => { acc[o.kind] = (acc[o.kind] ?? 0) + 1; return acc; }, {});
 console.log("[cli] sonuç:", summary);

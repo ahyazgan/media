@@ -1,0 +1,10 @@
+{
+  "sourceId": "tuik",
+  "sourceName": "Türkiye İstatistik Kurumu",
+  "externalId": "sanayi-uretim-endeksi-agustos-2026-53925-d5e6f7a8",
+  "title": "Sanayi Üretim Endeksi, Ağustos 2026",
+  "url": "https://data.tuik.gov.tr/Bulten/Index?p=Sanayi-Uretim-Endeksi-Agustos-2026-53925",
+  "publishedAt": "2026-10-12T07:00:00.000Z",
+  "payload": { "section": "sanayi", "sectionLabel": "Sanayi", "feedId": "sanayi-uretim-endeksi-agustos-2026-53925-d5e6f7a8" },
+  "synthetic": true
+}

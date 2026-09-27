@@ -16,6 +16,19 @@ const Env = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHANNEL_ID: z.string().optional(),
   INDEXNOW_KEY: z.string().optional(),
+  // Faz 3 — push, e-posta, takvim
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+  PUSH_MIN_IMPORTANCE: z.coerce.number().int().min(1).max(6).default(4),
+  SMTP_URL: z.string().optional(),
+  MAIL_FROM: z.string().default("Kaynak <bulten@example.com>"),
+  MAIL_DIR: z.string().default("./storage/mail"),
+  BULLETIN_TIME: z.string().regex(/^\d{2}:\d{2}$/).default("07:30"),
+  TCMB_FEED_URL: z.string().optional(),
+  TUIK_FEED_URL: z.string().optional(),
+  TCMB_CALENDAR_URL: z.string().optional(),
+  TUIK_CALENDAR_URL: z.string().optional(),
   STORAGE_DIR: z.string().default("./storage"),
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().optional(),
@@ -28,5 +41,6 @@ export function loadEnv(overrides: Partial<Record<keyof Env, string>> = {}): Env
   for (const k of Object.keys(raw)) if (raw[k] === "") delete raw[k];
   const env = Env.parse(raw);
   env.STORAGE_DIR = resolveFromRoot(env.STORAGE_DIR);
+  env.MAIL_DIR = resolveFromRoot(env.MAIL_DIR);
   return env;
 }

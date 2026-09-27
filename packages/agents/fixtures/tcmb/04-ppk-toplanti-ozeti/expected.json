@@ -1,0 +1,6 @@
+{
+  "note": "Sentetik belge. Toplantı özeti: kararın gerekçesi; makro, importance 3–4. Çok sayıda yüzde, numericGrounding için zengin.",
+  "classify": { "category": ["makro"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["2,1", "1,4", "28,4", "41,2", "19,6", "30,8", "1,9", "1,8", "0,6", "0,8", "74,9", "150"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}

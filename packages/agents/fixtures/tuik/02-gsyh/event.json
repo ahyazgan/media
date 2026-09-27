@@ -1,0 +1,10 @@
+{
+  "sourceId": "tuik",
+  "sourceName": "Türkiye İstatistik Kurumu",
+  "externalId": "donemsel-gayrisafi-yurt-ici-hasila-ii-ceyrek-nisan-haziran-2026-53890-a2b3c4d5",
+  "title": "Dönemsel Gayrisafi Yurt İçi Hasıla, II. Çeyrek: Nisan - Haziran, 2026",
+  "url": "https://data.tuik.gov.tr/Bulten/Index?p=Donemsel-Gayrisafi-Yurt-Ici-Hasila-II.-Ceyrek:-Nisan---Haziran,-2026-53890",
+  "publishedAt": "2026-09-01T07:00:00.000Z",
+  "payload": { "section": "buyume", "sectionLabel": "Ulusal Hesaplar", "feedId": "donemsel-gayrisafi-yurt-ici-hasila-ii-ceyrek-nisan-haziran-2026-53890-a2b3c4d5" },
+  "synthetic": true
+}

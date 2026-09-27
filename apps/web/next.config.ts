@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
 
 // Monorepo kökündeki .env'yi yükle (Next yalnızca apps/web/.env okur). Var olan değerler ezilmez.
 const rootEnv = join(process.cwd(), "..", "..", ".env");
@@ -14,11 +15,11 @@ if (existsSync(rootEnv)) {
 const config: NextConfig = {
   reactStrictMode: true,
   // Workspace paketleri kaynak (.ts/.tsx) olarak tüketilir; NodeNext tarzı ".js" içe aktarımları .ts'e çözülür.
-  transpilePackages: ["@kaynak/ui"],
+  transpilePackages: ["@kaynak/ui", "@kaynak/pipeline"],
   // PGlite (wasm + import.meta.url) ve drizzle sürücüleri Node tarafında paketlenmez.
   // @kaynak/db Node'un yerel TypeScript yükleyicisiyle (Node ≥ 22.6 tip soyma) gerçek Node realm'inde çalışır;
   // PGlite'ın wasm/URL yükleyicisi Next dev sandbox'ında bozulur, bu yüzden paketlenmez.
-  serverExternalPackages: ["@kaynak/db", "@electric-sql/pglite", "pg", "drizzle-orm"],
+  serverExternalPackages: ["@kaynak/db", "@electric-sql/pglite", "pg", "drizzle-orm", "nodemailer"],
   poweredByHeader: false,
   webpack: (cfg) => {
     cfg.resolve.extensionAlias = { ".js": [".ts", ".tsx", ".js"], ".mjs": [".mts", ".mjs"] };
@@ -30,4 +31,15 @@ const config: NextConfig = {
     { source: "/_dev/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
   ],
 };
-export default config;
+// Service worker (şartname §7). Geliştirmede kapalı (PWA_DEV=1 ile açılır); `next build` public/sw.js üretir.
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development" && process.env.PWA_DEV !== "1",
+  cacheOnNavigation: true,
+  reloadOnOnline: true,
+  additionalPrecacheEntries: [{ url: "/~offline", revision: String(Date.now()) }],
+  // /_dev/ui rotasının klasör adı "%5Fdev"dir; parça URL'si sunucudan 400 döner ve precache kurulumu takılır. Geliştirici sayfası çevrimdışı gerekmez.
+  exclude: [/\.map$/, /^manifest.*\.js$/, /%5Fdev|_dev\//],
+});
+export default withSerwist(config);

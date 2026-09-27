@@ -1,5 +1,5 @@
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
-import { articles, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
+import { and, asc, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
+import { articles, calendarEvents, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
 import { getDb } from "./db";
 
 export async function latestArticles(limit = 20, category?: string): Promise<Article[]> {
@@ -151,4 +151,39 @@ export async function companiesByCodes(codes: string[]) {
   if (!codes.length) return [];
   const { db } = await getDb();
   return db.select().from(companies).where(inArray(companies.kapCode, codes.map((c) => c.toUpperCase())));
+}
+
+// ---------------------------------------------------------------------------
+// Faz 3 — makro takvim, RSS, arama
+// ---------------------------------------------------------------------------
+
+export interface CalendarRow { id: string; scheduledAt: string; institution: string; title: string; articleHref: string | null; sourceUrl: string | null }
+
+/** Önümüzdeki `days` günün takvimi; yayınlanmış haber varsa bağlantısıyla. Bugün açıklananlar (son 3 saat) listede kalır. */
+export async function calendarUpcoming(days = 30, limit = 200, from = new Date()): Promise<CalendarRow[]> {
+  const { db } = await getDb();
+  const start = new Date(from.getTime() - 3 * 3_600_000);
+  const end = new Date(from.getTime() + days * 86_400_000);
+  const rows = await db.select({ id: calendarEvents.id, scheduledAt: calendarEvents.scheduledAt, institution: calendarEvents.institution, title: calendarEvents.title, sourceUrl: calendarEvents.sourceUrl, slug: articles.slug, status: articles.status })
+    .from(calendarEvents).leftJoin(articles, eq(articles.id, calendarEvents.articleId))
+    .where(and(gte(calendarEvents.scheduledAt, start), lt(calendarEvents.scheduledAt, end)))
+    .orderBy(asc(calendarEvents.scheduledAt)).limit(limit);
+  return rows.map((r) => ({ id: r.id, scheduledAt: r.scheduledAt.toISOString(), institution: r.institution, title: r.title, sourceUrl: r.sourceUrl, articleHref: r.slug && r.status === "published" ? `/haber/${r.slug}` : null }));
+}
+
+/** RSS için son yayınlanan haberler (yayın tarihine göre). */
+export async function recentArticles(limit = 50): Promise<Article[]> {
+  const { db } = await getDb();
+  return db.select().from(articles).where(eq(articles.status, "published")).orderBy(desc(articles.publishedAt)).limit(limit);
+}
+
+/** Basit başlık/dek araması (PWA share_target buraya düşer). */
+export async function searchArticles(q: string, limit = 30): Promise<Article[]> {
+  const term = q.trim().slice(0, 80);
+  if (term.length < 2) return [];
+  const { db } = await getDb();
+  const like = `%${term.replace(/[%_]/g, " ")}%`;
+  return db.select().from(articles)
+    .where(and(eq(articles.status, "published"), or(ilike(articles.title, like), ilike(articles.dek, like))))
+    .orderBy(desc(articles.publishedAt)).limit(limit);
 }

@@ -23,6 +23,8 @@ export interface CronLike {
   timezone: string;
   windows: { between: [string, string]; everySeconds: number; weekdays?: number[] }[];
   defaultEverySeconds: number;
+  /** Takvimde yakın bir yayın varsa (worker `hot=true` verir) kullanılacak sıklık — TCMB/TÜİK: 30 sn */
+  hotEverySeconds?: number;
 }
 
 export interface SourceAdapter {
@@ -34,7 +36,8 @@ export interface SourceAdapter {
 }
 
 /** Şu anki yerel saate göre kaç saniyede bir taranmalı. */
-export function intervalFor(schedule: CronLike, now = new Date()): number {
+export function intervalFor(schedule: CronLike, now = new Date(), hot = false): number {
+  if (hot && schedule.hotEverySeconds) return schedule.hotEverySeconds;
   const hm = new Intl.DateTimeFormat("tr-TR", { timeZone: schedule.timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
   const weekday = weekdayIn(schedule.timezone, now);
   for (const w of schedule.windows) {

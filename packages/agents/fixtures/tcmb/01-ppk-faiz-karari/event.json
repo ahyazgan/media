@@ -1,0 +1,10 @@
+{
+  "sourceId": "tcmb",
+  "sourceName": "Türkiye Cumhuriyet Merkez Bankası",
+  "externalId": "duy2026-38-a1b2c3d4",
+  "title": "Faiz Oranlarına İlişkin Basın Duyurusu (2026-38)",
+  "url": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Duyurular/Basin/2026/DUY2026-38",
+  "publishedAt": "2026-10-22T11:00:00.000Z",
+  "payload": { "section": "ppk", "sectionLabel": "PPK Kararı", "feedId": "duy2026-38-a1b2c3d4" },
+  "synthetic": true
+}

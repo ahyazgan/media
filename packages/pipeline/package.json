@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./mail": "./src/mail.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
@@ -17,6 +20,12 @@
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "nanoid": "^5.1.5",
+    "nodemailer": "^10.0.10",
+    "web-push": "^3.6.7",
     "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.2",
+    "@types/web-push": "^3.6.4"
   }
 }
