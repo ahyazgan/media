@@ -4,7 +4,20 @@
 
 Sunucu ve alan adı giderleri bu hesaba dahil değildir (bkz. [DAGITIM.md](DAGITIM.md)).
 
-## Hesap
+## Ölçüm (27 Eylül 2026, ilk canlı değerlendirme)
+
+22 altın örnek gerçek modellerle (Haiku 4.5 sınıflandırma, Sonnet 5 yazım) üç kez koşuldu; son koşu 21 geçti, 1 uyarı, 0 kaldı.
+
+| Ölçüm | Değer |
+|---|---|
+| classify çağrısı | $0.0035 · medyan 2,5 sn |
+| Yazılan haber başına | $0.028–0.032 (yeniden yazım dahil) · medyan 17,6 sn, p95 40,6 sn |
+| Aylık, yalnızca Resmi Gazete | $3,5 / $6,6 / $11 (düşük / tipik / yüksek hacim) |
+| Aylık, RG + KAP + TCMB/TÜİK | $62 / $124 / $245 |
+
+Karakterden yapılan ilk tahmin tipik senaryoda $118 idi; ölçüm $124 çıktı. Yüksek senaryo ölçümde daha düşük, çünkü tahmin uzun belgeler için 3,5 bin çıktı token'ı varsaymıştı.
+Yeniden üretmek için: `pnpm eval:agents` ardından `pnpm cost:estimate -- --from-eval latest`.
+## Hesap (tahmin, karakterden)
 
 Yeniden üretmek için: `pnpm cost:estimate`. Kullanılan modeller ve fiyatlar `.env`'deki `MODEL_CLASSIFY` / `MODEL_WRITE` ile `packages/agents/src/eval/pricing.ts` tablosundan okunur.
 
