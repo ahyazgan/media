@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kaynak
+      POSTGRES_PASSWORD: kaynak
+      POSTGRES_DB: kaynak
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaynak"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["redisdata:/data"]
+    command: ["redis-server", "--appendonly", "yes"]
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: kaynak
+      MINIO_ROOT_PASSWORD: kaynakkaynak
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["miniodata:/data"]
+  worker:
+    build: { context: ., dockerfile: apps/worker/Dockerfile }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://kaynak:kaynak@postgres:5432/kaynak
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    profiles: ["full"]
+volumes:
+  pgdata: {}
+  redisdata: {}
+  miniodata: {}

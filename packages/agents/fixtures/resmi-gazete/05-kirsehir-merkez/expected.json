@@ -1,0 +1,6 @@
+{
+  "note": "Gerçek belge (ilk 8 madde; belge 17 madde). Üniversite iç yönetmeliği: ekonomi okuru için haber değeri yok → isNews false, importance <= 2.",
+  "classify": { "category": ["mevzuat", "diger"], "importanceMax": 2, "isNews": false },
+  "mustGround": ["2547", "4/11/1981"],
+  "mustNotContain": []
+}

@@ -1,0 +1,6 @@
+{
+  "note": "Gerçek belge. Tek üniversitenin döner sermaye yönetmeliği; dar kapsam, importance <= 2, isNews false beklenir (yayınlanmaz, listelenir).",
+  "classify": { "category": ["mevzuat", "diger", "sirketler"], "importanceMax": 2, "isNews": false },
+  "mustGround": ["26872", "10/5/2008"],
+  "mustNotContain": ["bekleniyor", "olabilir"]
+}

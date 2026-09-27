@@ -1,0 +1,22 @@
+{
+  "name": "@kaynak/pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "echo skip",
+    "run-cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@kaynak/agents": "workspace:*",
+    "@kaynak/db": "workspace:*",
+    "@kaynak/sources": "workspace:*",
+    "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.44.5",
+    "nanoid": "^5.1.5",
+    "zod": "^4.1.11"
+  }
+}

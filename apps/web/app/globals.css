@@ -1,0 +1,28 @@
+:root {
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-text: var(--font-dm), system-ui, sans-serif;
+}
+.k-main { padding-top: 20px; padding-bottom: 48px; min-height: 60vh; }
+.k-footer { border-top: 2px solid var(--ink); background: var(--tint); padding: 28px 0 calc(28px + var(--safe-bottom)); margin-top: 40px; }
+.k-footer__inner { display: grid; gap: 14px; }
+.k-footer__disclaimer { margin: 0; font-size: 14px; color: var(--body); max-width: 720px; }
+.k-footer__nav { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; font-weight: 500; }
+
+/* Haber gövdesi */
+.k-article { max-width: var(--col-read); }
+.k-article__title { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 12px; }
+.k-article__dek { font-size: 20px; color: var(--body); margin: 0 0 16px; line-height: 1.4; }
+.k-article__byline { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px 0; margin-bottom: 20px; display: grid; gap: 4px; }
+.k-article__body { font-size: 18px; line-height: 1.65; color: var(--ink); }
+.k-article__body p { margin: 0 0 1.1em; }
+.k-article__body ul { padding-left: 22px; }
+.k-article__status { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 3px; background: var(--tint); color: var(--muted); }
+@media (max-width: 640px) { .k-article__title { font-size: 28px; } .k-article__dek { font-size: 17px; } .k-article__body { font-size: 17px; } }
+
+.k-section-h { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin: 24px 0 8px; }
+.k-section-h h2 { font-size: 22px; }
+.k-section-h a { font-size: 13px; color: var(--muted); }
+.k-empty { padding: 32px; text-align: center; color: var(--muted); background: var(--tint); border-radius: var(--radius); }
+.k-prose { max-width: var(--col-read); font-size: 17px; line-height: 1.6; color: var(--body); }
+.k-prose h1 { color: var(--ink); font-size: 32px; margin-bottom: 16px; }
+.k-prose h2 { color: var(--ink); font-size: 22px; margin: 24px 0 8px; }

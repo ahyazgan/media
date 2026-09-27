@@ -1,0 +1,6 @@
+{
+  "note": "Gerçek belge. Tüm anonim/limited şirketleri ve mali müşavirleri ilgilendiren e-defter tebliği; hedef kitlenin tam merkezi.",
+  "classify": { "category": ["mevzuat", "sirketler"], "importanceMin": 3, "isNews": true },
+  "mustGround": ["32813", "14/2/2025", "1/1/2026"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre", "tavsiye"]
+}

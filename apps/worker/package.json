@@ -1,0 +1,23 @@
+{
+  "name": "@kaynak/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "echo skip"
+  },
+  "dependencies": {
+    "@kaynak/agents": "workspace:*",
+    "@kaynak/db": "workspace:*",
+    "@kaynak/pipeline": "workspace:*",
+    "@kaynak/sources": "workspace:*",
+    "bullmq": "^5.58.5",
+    "dotenv": "^17.2.2",
+    "ioredis": "^5.7.0",
+    "drizzle-orm": "^0.44.5"
+  }
+}

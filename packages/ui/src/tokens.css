@@ -1,0 +1,57 @@
+/* Fuşya Gazete — tasarım token'ları (şartname §6.1) */
+:root {
+  --ink: #1A1826;
+  --ground: #FFFFFF;
+  --tint: #F6F3F7;
+  --line: #E7E1EA;
+  --muted: #7A7388;
+  --body: #4B4458;
+  --accent: #E0187B;
+  --accent-2: #0E9A9A;
+  --up: #12875D;
+  --down: #C8203D;
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-text: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --col-ad: 1040px;     /* skin reklamlı */
+  --col-wide: 1360px;   /* reklamsız */
+  --col-read: 680px;    /* haber gövdesi */
+  --gutter: 16px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
+.k-container { max-width: var(--col-wide); margin: 0 auto; padding: 0 var(--gutter); }
+.k-container--ad { max-width: var(--col-ad); }
+.k-muted { color: var(--muted); }
+.k-body { color: var(--body); }
+.k-label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.k-hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+.k-card { background: var(--tint); border-radius: var(--radius); padding: 16px; }
+.k-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius); font-weight: 700; font-size: 14px; border: 1px solid var(--ink); background: var(--ink); color: var(--ground); cursor: pointer; }
+.k-btn:hover { text-decoration: none; background: var(--accent); border-color: var(--accent); }
+.k-btn--ghost { background: transparent; color: var(--ink); }
+.k-btn--ghost:hover { background: var(--tint); color: var(--ink); border-color: var(--ink); }
+.k-grid { display: grid; gap: 24px; }
+@media (min-width: 960px) {
+  .k-grid--main { grid-template-columns: minmax(0, 1fr) 320px; }
+  .k-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.k-up { color: var(--up); } .k-down { color: var(--down); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

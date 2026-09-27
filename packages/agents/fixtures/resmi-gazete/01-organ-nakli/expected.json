@@ -1,0 +1,6 @@
+{
+  "note": "Gerçek belge (Exa üzerinden çekildi). Sağlık mevzuatı; ekonomi okuru için sınırda haber. category mevzuat|diger kabul; isNews her iki yönde kabul edilir, importance <= 3 olmalı.",
+  "classify": { "category": ["mevzuat", "diger"], "importanceMax": 3, "isNews": null },
+  "mustGround": ["32038", "9/12/2022", "6698", "24/3/2016"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}

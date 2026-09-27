@@ -1,0 +1,15 @@
+{
+  "note": "BİLEREK BOZULMUŞ altın örnek: 02-tuketici-uzlasma belgesine dayanır ama gövdede belgede olmayan sayılar var (5 üye, 15 Kasım 2025, 2,5 milyon TL). numericGroundingCheck bunu REDDETMELİ. Şartname Faz 1 kabul kriteri.",
+  "fixture": "02-tuketici-uzlasma",
+  "article": {
+    "title": "Tüketici cezalarında uzlaşma komisyonları il müdürlüklerine geliyor",
+    "dek": "Ticaret Bakanlığı, 2,5 milyon TL'ye kadar cezalarda il düzeyinde uzlaşma yolunu açtı.",
+    "bodyMarkdown": "Ticaret Bakanlığı, 6502 sayılı Tüketicinin Korunması Hakkında Kanun kapsamındaki idari para cezalarına ilişkin uzlaşma yönetmeliğini değiştirdi. Değişiklikle Bakanlık, gerekli gördüğü hallerde ticaret il müdürlükleri bünyesinde uzlaşma komisyonu kurabilecek.\n\nKomisyon, ticaret il müdürü başkanlığında beş üyeden oluşacak. Üyeler il müdürlüğü personeli arasından Genel Müdürlüğün uygun göreceği kişiler arasından seçilecek. Komisyonların görev ve yetki alanı ile sınırı Bakanlık tarafından belirlenecek.\n\nKomisyonların sekretarya hizmetleri merkezde Genel Müdürlük, taşrada ilgili ticaret il müdürlükleri tarafından yerine getirilecek.\n\nDüzenleme 15 Kasım 2025 tarihinde yürürlüğe girecek. Mevcut yönetmelik 30 Mayıs 2018 tarihli ve 30436 sayılı Resmî Gazete'de yayımlanmıştı. Değişiklik, il düzeyinde uzlaşma başvurularının merkeze gönderilmeden sonuçlandırılmasına imkân tanıyor. Bakanlık, komisyonların hangi illerde kurulacağını ayrıca duyuracak. Yönetmelik hükümlerini Ticaret Bakanı yürütecek.",
+    "keyFacts": [
+      { "text": "İl müdürlüklerinde komisyon kurulabilecek", "quoteFromSource": "Bakanlık gerekli görülen hâllerde ticaret il müdürlükleri bünyesinde komisyon kurabilir." }
+    ],
+    "tickers": [],
+    "tags": ["tuketici", "idari-para-cezasi", "ticaret-bakanligi", "uzlasma"],
+    "numbersUsed": ["6502", "5", "15 Kasım 2025", "30 Mayıs 2018", "30436", "2,5 milyon"]
+  }
+}

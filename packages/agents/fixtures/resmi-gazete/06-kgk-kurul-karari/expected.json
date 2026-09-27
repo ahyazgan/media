@@ -1,0 +1,6 @@
+{
+  "note": "Gerçek belge; PDF. Exa'nın OCR çıktısındaki Türkçe karakter bozulmaları (ör. 'Siirdiriilebilirlik') düzeltildi; pdf-parse metin katmanından doğru karakterleri üretir. Bağımsız denetim kuruluşlarını ve mali müşavirleri ilgilendirir.",
+  "classify": { "category": ["mevzuat", "sirketler", "borsa"], "importanceMin": 2, "isNews": true },
+  "mustGround": ["32785", "01.01.2027", "22/09/2025"],
+  "mustNotContain": ["bekleniyor", "olabilir", "uzmanlara göre"]
+}
