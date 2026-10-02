@@ -21,7 +21,7 @@ export class TcmbAdapter extends FeedAdapter {
   constructor(opts: Partial<FeedAdapterOptions> = {}) {
     super({
       id: "tcmb", official: true,
-      schedule: { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600, hotEverySeconds: 30 },
+      schedule: { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600, hotEverySeconds: 30, releaseEverySeconds: 5 },
       sectionOf: tcmbSection,
       accept: (it) => !/\/EN\/|\bEN\b/.test(it.link) && !/^press release/i.test(it.title),
       ...opts,

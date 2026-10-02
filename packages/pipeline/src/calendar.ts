@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { calendarEvents, type Db, type CalendarEvent } from "@kaynak/db";
-import type { CalendarEntry } from "@kaynak/sources";
+import type { CalendarEntry, CalendarTiming } from "@kaynak/sources";
 
 /** Takvim girdilerini ekler; (institution, title, scheduledAt) zaten varsa atlar. Eklenen sayısını döndürür. */
 export async function syncCalendar(db: Db, entries: CalendarEntry[]): Promise<number> {
@@ -33,6 +33,28 @@ export async function isCalendarHot(db: Db, institution: string, now = new Date(
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(calendarEvents)
     .where(and(eq(calendarEvents.institution, institution), gte(calendarEvents.scheduledAt, lo), lt(calendarEvents.scheduledAt, hi)));
   return (row?.n ?? 0) > 0;
+}
+
+/**
+ * Takvime göre tarama durumu: yayın anının `releaseBeforeSec` öncesinden `releaseAfterSec` sonrasına "release" (saniye
+ * hassasiyeti), `isCalendarHot` aralığında "hot"; ayrıca bir sonraki yayın penceresine kalan süre (bekleme onu aşmasın).
+ */
+export async function calendarTiming(db: Db, institution: string, now = new Date(), releaseBeforeSec = 60, releaseAfterSec = 300): Promise<CalendarTiming> {
+  const lo = new Date(now.getTime() - 30 * 60_000);
+  const hi = new Date(now.getTime() + 6 * 3_600_000);
+  const rows = await db.select({ at: calendarEvents.scheduledAt }).from(calendarEvents)
+    .where(and(eq(calendarEvents.institution, institution), gte(calendarEvents.scheduledAt, lo), lt(calendarEvents.scheduledAt, hi)));
+  const t = now.getTime();
+  let phase: CalendarTiming["phase"] = "none";
+  let secondsToRelease: number | undefined;
+  for (const { at } of rows) {
+    const start = at.getTime() - releaseBeforeSec * 1000;
+    const end = at.getTime() + releaseAfterSec * 1000;
+    if (t >= start && t <= end) phase = "release";
+    else if (phase !== "release" && t >= at.getTime() - 5 * 60_000 && t <= at.getTime() + 30 * 60_000) phase = "hot";
+    if (start > t) secondsToRelease = Math.min(secondsToRelease ?? Infinity, (start - t) / 1000);
+  }
+  return { phase, ...(secondsToRelease !== undefined ? { secondsToRelease } : {}) };
 }
 
 /**

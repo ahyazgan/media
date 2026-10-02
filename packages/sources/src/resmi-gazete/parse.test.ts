@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseDayPage, normalizeSection, parseIssueNo } from "./parse.js";
 import { ResmiGazeteAdapter, dayPageUrl } from "./adapter.js";
-import { intervalFor, nextDelaySeconds } from "../types.js";
+import { intervalFor, nextDelaySeconds, watchDelaySeconds } from "../types.js";
+import { _resetHttpState } from "../http.js";
 
 const html = readFileSync(new URL("../../fixtures/day-2025-09-26.html", import.meta.url), "utf8");
 const PAGE = "https://www.resmigazete.gov.tr/eskiler/2025/09/20250926.htm";
@@ -57,10 +58,11 @@ describe("ResmiGazeteAdapter", () => {
     expect(dayPageUrl("https://www.resmigazete.gov.tr", "2025-09-26")).toBe("https://www.resmigazete.gov.tr/eskiler/2025/09/20250926.htm");
     expect(dayPageUrl("https://www.resmigazete.gov.tr", "2025-09-26", 1)).toBe("https://www.resmigazete.gov.tr/eskiler/2025/09/20250926M1.htm");
   });
-  it("gece 23:30–03:00 arası 2 dk, 06:00–10:00 arası 3 dk, dışında 30 dk", () => {
+  it("gece 23:58–00:10 arası 15 sn, 23:30–03:00 arası 2 dk, 06:00–10:00 arası 3 dk, dışında 30 dk", () => {
     const s = a.schedule();
     expect(intervalFor(s, new Date("2026-10-01T20:45:00Z"))).toBe(120);  // 23:45 TR
-    expect(intervalFor(s, new Date("2026-10-01T21:00:00Z"))).toBe(120);  // 00:00 TR
+    expect(intervalFor(s, new Date("2026-10-01T21:00:00Z"))).toBe(15);   // 00:00 TR: yayın anı
+    expect(intervalFor(s, new Date("2026-10-01T21:30:00Z"))).toBe(120);  // 00:30 TR
     expect(intervalFor(s, new Date("2026-10-01T23:30:00Z"))).toBe(120);  // 02:30 TR
     expect(intervalFor(s, new Date("2026-10-02T01:00:00Z"))).toBe(1800); // 04:00 TR
     expect(intervalFor(s, new Date("2026-10-02T04:00:00Z"))).toBe(180);  // 07:00 TR
@@ -75,5 +77,48 @@ describe("nextDelaySeconds", () => {
     expect(nextDelaySeconds(s, new Date("2026-10-01T20:45:00Z"))).toBe(120);  // pencere içinde: 2 dk
     expect(nextDelaySeconds(s, new Date("2026-10-02T02:45:00Z"))).toBe(900);  // 05:45 TR → 06:00'ya 15 dk
     expect(nextDelaySeconds(s, new Date("2026-10-02T11:00:00Z"))).toBe(1800); // 14:00 TR: varsayılan
+  });
+});
+
+describe("gece yarısı: Türkiye günü ve geçmiş gün önbelleği", () => {
+  it("TR 00:05'te yeni günün fihristini ister; geçmiş günleri 10 dk içinde yeniden istemez", async () => {
+    _resetHttpState();
+    const asked: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+      asked.push(url.replace(/^.*\/eskiler\//, ""));
+      if (/M\d+\.htm$/.test(url)) return new Response("yok", { status: 404 });
+      return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+    };
+    let now = new Date("2026-10-01T21:05:00Z"); // 2 Ekim 00:05 TR
+    const rg = new ResmiGazeteAdapter({ http: { fetchImpl }, now: () => now });
+    await rg.fetchNew(new Date("2026-10-01T09:00:00Z"));
+    expect(asked).toContain("2026/10/20261002.htm");
+    expect(asked).toContain("2026/10/20261001.htm");
+    asked.length = 0;
+    now = new Date("2026-10-01T21:05:15Z"); // 15 sn sonra
+    await rg.fetchNew(new Date("2026-10-01T09:00:00Z"));
+    expect(asked.filter((u) => !/M\d+\.htm$/.test(u))).toEqual(["2026/10/20261002.htm"]);
+  });
+});
+
+describe("watchDelaySeconds (takvim)", () => {
+  const s = { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 900, hotEverySeconds: 30, releaseEverySeconds: 5 };
+  const t = new Date("2026-10-05T06:30:00Z");
+  it("yayın anında 5 sn, yakın yayında 30 sn, aksi halde varsayılan", () => {
+    expect(watchDelaySeconds(s, t, { phase: "release" })).toBe(5);
+    expect(watchDelaySeconds(s, t, { phase: "hot" })).toBe(30);
+    expect(watchDelaySeconds(s, t)).toBe(900);
+  });
+  it("bir sonraki yayın penceresinin başını aşmaz", () => {
+    expect(watchDelaySeconds(s, t, { phase: "none", secondsToRelease: 120 })).toBe(120);
+    expect(watchDelaySeconds(s, t, { phase: "hot", secondsToRelease: 12 })).toBe(12);
+    expect(watchDelaySeconds(s, t, { phase: "hot", secondsToRelease: 2 })).toBe(5);
+  });
+  it("RG gece yarısı penceresi 15 sn", () => {
+    const rg = new ResmiGazeteAdapter().schedule();
+    expect(nextDelaySeconds(rg, new Date("2026-10-01T21:03:00Z"))).toBe(15); // 00:03 TR
+    expect(nextDelaySeconds(rg, new Date("2026-10-01T20:57:30Z"))).toBe(30); // 23:57:30 TR → 23:58'e 30 sn
   });
 });

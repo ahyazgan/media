@@ -38,6 +38,7 @@ export class ResmiGazeteAdapter implements SourceAdapter {
   private readonly maxMukerrer: number;
   private readonly http: PoliteFetchOptions;
   private readonly now: () => Date;
+  private readonly dayCache = new Map<string, { at: number; events: RawEvent[] }>();
 
   constructor(opts: ResmiGazeteOptions = {}) {
     this.baseUrl = (opts.baseUrl ?? "https://www.resmigazete.gov.tr").replace(/\/$/, "");
@@ -57,6 +58,9 @@ export class ResmiGazeteAdapter implements SourceAdapter {
     return {
       timezone: "Europe/Istanbul",
       windows: [
+        // Yayın anı (gece yarısı): 23:58–00:10 arası 15 sn; ilk eşleşen pencere geçerli olduğundan önce gelir
+        { between: ["23:58", "23:59"], everySeconds: 15 },
+        { between: ["00:00", "00:10"], everySeconds: 15 },
         { between: ["23:30", "23:59"], everySeconds: 120 },
         { between: ["00:00", "03:00"], everySeconds: 120 },
         { between: ["06:00", "10:00"], everySeconds: 180 },
@@ -67,17 +71,26 @@ export class ResmiGazeteAdapter implements SourceAdapter {
 
   /** since tarihinden bugüne kadar her günün fihristini (ve mükerrerlerini) çeker. */
   async fetchNew(since: Date): Promise<RawEvent[]> {
-    const days = this.datesBetween(since, this.now());
+    const now = this.now();
+    const days = this.datesBetween(since, now);
+    const today = days[days.length - 1];
     const out: RawEvent[] = [];
     for (const issueDate of days) {
+      // Geçmiş günler 10 dk içinde yeniden istenmez (gece 15 sn'lik taramada yalnızca bugünün fihristi istensin)
+      const cached = issueDate !== today ? this.dayCache.get(issueDate) : undefined;
+      if (cached && now.getTime() - cached.at < 10 * 60_000) { out.push(...cached.events); continue; }
+      const events: RawEvent[] = [];
       const main = await this.fetchDay(issueDate);
-      out.push(...main);
-      if (main.length === 0) continue; // o gün Gazete yok (ör. tatil) → mükerrer aranmaz
-      for (let k = 1; k <= this.maxMukerrer; k++) {
-        const mk = await this.fetchDay(issueDate, k);
-        if (mk.length === 0) break;
-        out.push(...mk);
+      events.push(...main);
+      if (main.length > 0) { // o gün Gazete yok (ör. tatil) → mükerrer aranmaz
+        for (let k = 1; k <= this.maxMukerrer; k++) {
+          const mk = await this.fetchDay(issueDate, k);
+          if (mk.length === 0) break;
+          events.push(...mk);
+        }
       }
+      this.dayCache.set(issueDate, { at: now.getTime(), events });
+      out.push(...events);
     }
     return out;
   }
@@ -139,11 +152,17 @@ export class ResmiGazeteAdapter implements SourceAdapter {
     throw lastErr;
   }
 
+  /**
+   * Türkiye takvimine göre günler (kalıcı UTC+3). UTC günü kullanılırsa TR 00:00–03:00 arası hâlâ önceki gün sayılır ve gece
+   * yarısı çıkan yeni sayı 03:00'e kadar hiç istenmez.
+   */
   private datesBetween(since: Date, now: Date): string[] {
     const out: string[] = [];
-    const start = new Date(Math.max(since.getTime(), now.getTime() - this.maxDays * 86_400_000));
+    const TR = 3 * 3_600_000;
+    const start = new Date(Math.max(since.getTime(), now.getTime() - this.maxDays * 86_400_000) + TR);
+    const trNow = new Date(now.getTime() + TR);
     const d = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const end = new Date(Date.UTC(trNow.getUTCFullYear(), trNow.getUTCMonth(), trNow.getUTCDate()));
     while (d <= end) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1); }
     return out;
   }

@@ -8,10 +8,10 @@ import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
 import { eq } from "drizzle-orm";
 import { rawEvents, sources } from "@kaynak/db";
-import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, nextDelaySeconds, type SourceAdapter } from "@kaynak/sources";
+import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, watchDelaySeconds, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import {
-  createMailer, createPushSender, createStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
+  createMailer, createPushSender, createStore, fakeAgents, ingestEvents, calendarTiming, istanbulDate, liveAgents, loadEnv, makeOnPublished,
   alertIfNeeded, checkSources, createAlerter, recordWatch, msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, syncMarketQuotes, type PipelineDeps,
 } from "@kaynak/pipeline";
 
@@ -50,11 +50,15 @@ async function trackHealth(sourceId: string, outcome: Parameters<typeof recordWa
   } catch (e) { console.error("[health] kayıt hatası", sourceId, (e as Error).message); }
 }
 
-/** Takvim saatine yakınsa (TCMB/TÜİK) sık tarama; aksi halde adapter'ın kendi penceresi. */
+/**
+ * Takvime göre (TCMB/TÜİK): yayın anında 5 sn, yakın yayında 30 sn, aksi halde adapter'ın kendi penceresi; bekleme bir
+ * sonraki yayın penceresinin başını aşmaz.
+ */
 async function intervalMs(a: SourceAdapter): Promise<number> {
   if (env.WATCH_EVERY_SECONDS) return env.WATCH_EVERY_SECONDS * 1000; // prova / hazırlık ortamı
-  const hot = a.schedule().hotEverySeconds ? await isCalendarHot(handle.db, a.id) : false;
-  return nextDelaySeconds(a.schedule(), new Date(), hot) * 1000;
+  const s = a.schedule();
+  const timing = s.hotEverySeconds || s.releaseEverySeconds ? await calendarTiming(handle.db, a.id) : undefined;
+  return watchDelaySeconds(s, new Date(), timing) * 1000;
 }
 async function watch(adapter: SourceAdapter, since: Date) {
   let events: Awaited<ReturnType<SourceAdapter["fetchNew"]>>;

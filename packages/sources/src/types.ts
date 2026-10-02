@@ -25,6 +25,24 @@ export interface CronLike {
   defaultEverySeconds: number;
   /** Takvimde yakın bir yayın varsa (worker `hot=true` verir) kullanılacak sıklık — TCMB/TÜİK: 30 sn */
   hotEverySeconds?: number;
+  /** Takvimdeki yayın anının hemen çevresinde (1 dk önce – 5 dk sonra) kullanılacak sıklık — TCMB/TÜİK: 5 sn */
+  releaseEverySeconds?: number;
+}
+
+/** Takvime göre o anki durum (worker hesaplar): yayın anı, yakın yayın ya da yok; bir sonraki yayın penceresine kalan süre */
+export interface CalendarTiming { phase: "release" | "hot" | "none"; secondsToRelease?: number }
+
+/**
+ * Takvimi de hesaba katan bekleme süresi: yayın anında `releaseEverySeconds`, yakın yayında `hotEverySeconds`, aksi halde
+ * adapter penceresi; hiçbir durumda bir sonraki yayın penceresinin başını aşmaz (TÜFE 10:00:00'da çıkıyorsa 09:59'da hazırız).
+ */
+export function watchDelaySeconds(schedule: CronLike, now: Date, timing: CalendarTiming = { phase: "none" }): number {
+  if (timing.phase === "release" && schedule.releaseEverySeconds) return schedule.releaseEverySeconds;
+  let delay = nextDelaySeconds(schedule, now, timing.phase !== "none");
+  if (schedule.releaseEverySeconds && timing.secondsToRelease !== undefined && timing.secondsToRelease > 0) {
+    delay = Math.min(delay, Math.max(schedule.releaseEverySeconds, Math.floor(timing.secondsToRelease)));
+  }
+  return delay;
 }
 
 export interface SourceAdapter {
@@ -72,7 +90,8 @@ export function nextDelaySeconds(schedule: CronLike, now = new Date(), hot = fal
       if (delta > 0 && delta < best) best = delta;
     }
   }
-  return Math.max(30, best);
+  // Pencereye birkaç saniye kaldıysa en az 30 sn (ya da pencerenin kendi aralığı daha kısaysa o kadar) beklenir
+  return Math.max(Math.min(base, 30), best);
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

@@ -46,7 +46,7 @@ export class TuikAdapter implements SourceAdapter {
   }
 
   schedule(): CronLike {
-    return { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 900, hotEverySeconds: 30 };
+    return { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 900, hotEverySeconds: 30, releaseEverySeconds: 5 };
   }
 
   listUrl(): string { return `${this.baseUrl}/api/tr/press/latest`; }

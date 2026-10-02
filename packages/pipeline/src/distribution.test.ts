@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { createDb, articles, calendarEvents, newsletterSubscribers, pushSubscriptions, rawEvents, type Article, type DbHandle } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
 import { TcmbAdapter, parseTcmbCalendar, parseTuikCalendar, type SourceAdapter, type RawEvent } from "@kaynak/sources";
-import { isCalendarHot, linkCalendarEvent, syncCalendar, upcomingEvents } from "./calendar.js";
+import { calendarTiming, isCalendarHot, linkCalendarEvent, syncCalendar, upcomingEvents } from "./calendar.js";
 import { createMailer } from "./mail.js";
 import { composeBulletin, msUntilNext, renderBulletin, sendBulletin } from "./newsletter.js";
 import { pushPayload, sendPushForArticle, type PushSender } from "./push.js";
@@ -36,6 +36,13 @@ describe("takvim", () => {
     expect(await isCalendarHot(h.db, "tcmb", new Date("2026-10-22T16:00:00+03:00"))).toBe(false);
     expect(await isCalendarHot(h.db, "tuik", NOW)).toBe(false);
     expect(await isCalendarHot(h.db, "tuik", new Date("2026-10-05T10:10:00+03:00"))).toBe(true);
+  });
+  it("calendarTiming: PPK 14:00 → 13:58 hot (pencereye 60 sn), 13:59:30 ve 14:03 release, 14:20 hot, 16:00 yok", async () => {
+    expect(await calendarTiming(h.db, "tcmb", NOW)).toEqual({ phase: "hot", secondsToRelease: 60 });
+    expect((await calendarTiming(h.db, "tcmb", new Date("2026-10-22T13:59:30+03:00"))).phase).toBe("release");
+    expect((await calendarTiming(h.db, "tcmb", new Date("2026-10-22T14:03:00+03:00"))).phase).toBe("release");
+    expect((await calendarTiming(h.db, "tcmb", new Date("2026-10-22T14:20:00+03:00"))).phase).toBe("hot");
+    expect((await calendarTiming(h.db, "tcmb", new Date("2026-10-22T16:00:00+03:00"))).phase).toBe("none");
   });
   it("TCMB haberi yayınlanınca en yakın takvim girdisine bağlanır", async () => {
     const a = new TcmbAdapter({ feedUrl: "https://example.test/rss" });
