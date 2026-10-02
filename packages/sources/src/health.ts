@@ -29,7 +29,8 @@ export function classifySourceError(e: unknown): SourceErrorKind {
 
 /** Engelleme, captcha ya da hız sınırı sayfası mı? (200 dönse bile gerçek içerik değildir) */
 export function looksLikeBlockPage(html: string): boolean {
-  const head = html.slice(0, 20_000);
+  // Script/stil etiketleri ve adresler atılır: cdnjs.cloudflare.com (BOTAŞ) ya da reCAPTCHA (EPDK) script'i engelleme değildir
+  const head = html.slice(0, 20_000).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<(link|meta)\b[^>]*>/gi, " ").replace(/https?:\/\/\S+/g, " ");
   return /captcha|cf-chl|cloudflare|access denied|request rejected|erişim(iniz)? (engellen|reddedil)|too many requests|güvenlik doğrulaması/i.test(head);
 }
 

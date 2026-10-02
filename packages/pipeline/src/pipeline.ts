@@ -69,6 +69,15 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     publishedAt: row.publishedAt, payloadHash: row.payloadHash, payload: row.payload,
   };
 
+  // Kaynağın işaretlediği rutin bildirim (KAP: borçlanma aracı, yatırımcı raporu…): belge indirilmez, model çağrılmaz;
+  // şirket bildirim geçmişine isNews=false olarak girer
+  if (row.payload["routine"] === true) {
+    await linkCompanies(deps.db, row, false);
+    await deps.db.update(rawEvents).set({ status: "skipped" }).where(eq(rawEvents.id, row.id));
+    log("skip:routine", { externalId: row.externalId, subject: row.payload["subject"] });
+    return { kind: "skipped", reason: "rutin bildirim" };
+  }
+
   // verify (a): belgeyi indir, sakla, metin çıkar
   const fetched = await adapter.fetchDocument(ev);
   const text = await documentToText(fetched.mime, fetched.bytes);

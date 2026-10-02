@@ -1,4 +1,5 @@
 import { isAllowed, parseRobots, type RobotsRules } from "./robots.js";
+import { installExtraCAs } from "./extraCa.js";
 
 export interface PoliteFetchOptions {
   userAgent?: string;
@@ -43,6 +44,7 @@ export class HttpError extends Error {
  * host başına en fazla 2 eş zamanlı istek.
  */
 export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): Promise<Response> {
+  if (!opts.fetchImpl) installExtraCAs();
   const f = opts.fetchImpl ?? fetch;
   const ua = opts.userAgent ?? DEFAULT_UA();
   const u = new URL(url);

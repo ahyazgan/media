@@ -125,6 +125,8 @@ describe("KAP uçtan uca: bildirim listesi → şirketler → haber / bildirim g
     }, offlineKap(k));
     const kinds = outcomes.map((o) => o.kind);
     expect(kinds.filter((x) => x === "skipped")).toHaveLength(1);
+    // genel bilgi formu kaynakta rutin işaretli: model çağrılmadan atlanır
+    expect(outcomes.find((o) => o.kind === "skipped")).toMatchObject({ reason: "rutin bildirim" });
     expect(kinds).not.toContain("rejected");
     expect(kinds.filter((x) => x === "published").length).toBeGreaterThanOrEqual(2);
     expect(kinds).toContain("review"); // bedelsiz sermaye artırımı: importance 4

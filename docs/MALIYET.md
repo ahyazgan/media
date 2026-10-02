@@ -95,7 +95,7 @@ KAP hacmi en belirsiz varsayımdır ve toplamı en çok o belirler.
 Etki büyüklüğüne göre sıralı. Hepsi kaliteyi etkileyebilir; uygulamadan önce `pnpm eval:agents` ile ölçün.
 
 1. **Yazımda düşünme derinliğini azaltmak.** Sonnet 5'te düşünme varsayılan olarak açık. Kısa, belgeye bağlı haber metni için `effort: "low"` ya da `"medium"` yeterli olabilir. Çıktı token'ı en pahalı kalem olduğu için tipik senaryoda en büyük kazanç buradadır.
-2. **KAP'ta kurala dayalı ön süzgeç.** Rutin bildirim türleri (ör. genel bilgi formu güncellemesi) hiç modele gitmeden atlanabilir. KAP classify çağrılarının bir kısmını ve buna bağlı yazımları siler.
+2. **KAP'ta kurala dayalı ön süzgeç — uygulandı (2026-10-02).** Rutin türler (borçlanma aracı ihracı/itfası, varant, piyasa yapıcılığı, genel bilgi formu, tertip ihraç belgesi, yatırımcı raporu; `KAP_ROUTINE_SUBJECTS`) belge indirilmeden ve model çağrılmadan atlanır, şirket bildirim geçmişinde kalır. 2 günlük canlı örneklemde modele giden KAP olayı 317'den 189'a indi (−%40).
 3. **Düşük önemli KAP haberlerini küçük modelle yazmak.** Önemi 1–2 olan bildirimleri Haiku ile yazmak; kalite kaybı eval'de görülmeli.
 4. **KAP belgelerini kısaltmak.** Finansal rapor bildirimleri uzun olabilir; KAP için belge sınırını 60 binden daha aşağı çekmek.
 

@@ -126,9 +126,13 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 
 ## Ek kaynaklar, depo, güvenlik ve testler (Faz 5 sonrası)
 
-- **SPK / BDDK / EPDK / BOTAŞ:** `packages/sources/src/listing/` genel liste adapter'ı; SPK haftalık bülten PDF (Cuma 17:00–20:00 5 dk),
-  diğerleri hafta içi 15 dk. Kapalı gelir; `pnpm db:seed -- --enable spk` (adresler `<ID>_LIST_URL` ile ezilir; canlı doğrulama gerekir,
-  altın örnekleri gerçek belgelerle ekleyin).
+- **SPK / BDDK / EPDK / BOTAŞ:** `packages/sources/src/listing/` genel liste adapter'ı (çoklu liste, `{yil}` adresleri, ana içerik seçicisi,
+  detay sayfasındaki PDF eki). 2026-10-02'de canlıda doğrulandı: SPK yıllık bülten sayfası (PDF; hafta içi 16–22 arası 10 dk), BDDK basın +
+  mevzuat + kuruluş duyuruları (metin PDF ekinde; aynı duyuru iki kategorideyse tek olay), EPDK duyuru tablosu, BOTAŞ doğal gaz toptan satış
+  tarifesi (yeni tarife = yeni kart; kurumsal haberler alınmaz). Diğerleri hafta içi 15 dk. Kapalı gelir; `pnpm db:seed -- --enable spk`
+  (ilk liste adresi `<ID>_LIST_URL` ile ezilir). Altın örnek henüz yok.
+- **TLS ara sertifikaları:** bazı kurum sunucuları zinciri eksik gönderir (BDDK). `packages/sources/certs/*.pem` ilk istekte Node'un CA listesine
+  eklenir (`extraCa.ts`, `tls.setDefaultCACertificates`); doğrulama kapatılmaz.
 - **S3/MinIO:** `S3_BUCKET` + anahtarlar tanımlıysa belgeler S3'e (`S3_ENDPOINT` ile MinIO path-style), yoksa `storage/`.
 - **Güvenlik:** haber gövdesi Markdown'ı ham HTML'i kaçırır ve yalnızca http(s)/mailto bağlantılarına izin verir; `/api/revalidate` sırrı sabit
   zamanlı karşılaştırılır; herkese açık POST uçlarında IP başına hız sınırı; `nosniff`, `Referrer-Policy`, `X-Frame-Options`,
@@ -148,7 +152,7 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 
 ## Bilinen kısıtlar
 
-- **resmigazete.gov.tr TLS zinciri** TÜBİTAK Kamu SM köküne dayanır; Node bunu tanımaz (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Kök sertifikayı indirip `NODE_EXTRA_CA_CERTS` ile verin. Doğrulamayı kapatmayın.
+- **resmigazete.gov.tr TLS zinciri** TÜBİTAK Kamu SM köküne dayanır; Node bunu tanımaz (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Kök sertifikayı (parmak izini kamusm.gov.tr'de doğrulayarak) `packages/sources/certs/` altına koyun ya da `NODE_EXTRA_CA_CERTS` ile verin. Doğrulamayı kapatmayın.
 - `packages/sources/fixtures/day-2025-09-26.html` yeniden oluşturulmuş bir fihrist; gerçek kopya için `pnpm --filter @kaynak/sources capture -- 2025-09-26`.
 - PGlite dosya modu tek süreç kilidi kullanır: aynı `DATABASE_URL` ile web ve worker'ı aynı anda açmayın (pipeline'ı çalıştırın, sonra web'i açın; ya da Postgres kullanın).
 - `numericGroundingCheck` küçük sayılarda (ör. "5") yanlış kabul üretebilir; yanlış RED üretmemeye öncelik verir. Saat biçimleri ("10:30") jeton sayılmaz.

@@ -23,6 +23,11 @@ describe("KAP canlı biçim (disclosureBasic)", () => {
     expect(e.publishedAt.toISOString()).toBe("2026-10-02T12:43:24.000Z");
     expect(events[1]!.payload["stockCodes"]).toEqual(["NRBNK", "NYB"]);
   });
+  it("rutin bildirimler (borçlanma aracı, yatırımcı raporu…) payload.routine ile işaretlenir, elenmez", () => {
+    const events = new KapAdapter().eventsFromJson(live);
+    expect(events.filter((e) => e.payload["routine"] === true).map((e) => e.externalId)).toEqual(["1671362", "1671358", "1671357", "1671356"]);
+    expect(new KapAdapter({ routineSubjects: [] }).eventsFromJson(live).some((e) => e.payload["routine"] === true)).toBe(false);
+  });
   it("bildirim PDF'inden metin çıkar", async () => {
     const text = await documentToText("application/pdf", livePdf);
     expect(text).toContain("Mali İşler ve Finans");

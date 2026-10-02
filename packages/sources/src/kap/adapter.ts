@@ -12,10 +12,29 @@ export interface KapOptions {
   requireStockCode?: boolean;
   /** Eski KAP'tan taşınan kayıtlar atlanır */
   skipOldKap?: boolean;
+  /**
+   * Konusu bu kalıplardan biriyle başlayan bildirimler `payload.routine = true` ile işaretlenir; pipeline bunları belge indirmeden
+   * ve modele göndermeden şirket bildirim geçmişine kaydedip atlar. [] işaretlemeyi kapatır.
+   */
+  routineSubjects?: RegExp[];
   http?: PoliteFetchOptions;
 }
 
 const DEFAULT_CLASSES: KapClass[] = ["ODA", "FR", "DG"];
+
+/**
+ * Rutin bildirim türleri (2026-10-02 canlı örneklem: sınıf/kod filtresinden sonra olayların ~%40'ı). Haber üretmez; model çağrısı
+ * harcamaz ama şirketin bildirim geçmişinde görünür. Pay geri alımı, özel durum, finansal rapor, sermaye artırımı, kâr payı gibi
+ * türler listede değildir.
+ */
+export const KAP_ROUTINE_SUBJECTS: RegExp[] = [
+  /^Pay Dışında Sermaye Piyasası Aracı İşlemlerine İlişkin Bildirim/i, // borçlanma aracı ihracı, kupon, itfa
+  /^Yatırım Kuruluşu Varant/i,
+  /^Piyasa Yapıcılığı Kapsamında/i,
+  /^Şirket Genel Bilgi Formu/i,
+  /^Tertip İhraç Belgesi/i,
+  /^Yatırımcı Raporu/i,
+];
 
 /** RawEvent.payload içinde şirket referansı — pipeline `companies`/`company_events` tablolarını buradan besler. */
 export interface CompanyRef { code: string; name: string }
@@ -27,6 +46,7 @@ export class KapAdapter implements SourceAdapter {
   private readonly classes: Set<KapClass>;
   private readonly requireStockCode: boolean;
   private readonly skipOldKap: boolean;
+  private readonly routineSubjects: RegExp[];
   private readonly http: PoliteFetchOptions;
 
   constructor(opts: KapOptions = {}) {
@@ -34,6 +54,7 @@ export class KapAdapter implements SourceAdapter {
     this.classes = new Set(opts.classes ?? DEFAULT_CLASSES);
     this.requireStockCode = opts.requireStockCode ?? true;
     this.skipOldKap = opts.skipOldKap ?? true;
+    this.routineSubjects = opts.routineSubjects ?? KAP_ROUTINE_SUBJECTS;
     this.http = opts.http ?? {};
   }
 
@@ -87,6 +108,7 @@ export class KapAdapter implements SourceAdapter {
       index: d.index, companyName: d.companyName, stockCodes: d.stockCodes, companies,
       section: d.disclosureClass, sectionLabel: d.classLabel, subject: d.subject, summary: d.summary,
       attachmentCount: d.attachmentCount, pdfUrl: disclosurePdfUrl(d.index, this.baseUrl),
+      routine: this.routineSubjects.some((re) => re.test(d.subject)),
     };
     const payloadHash = createHash("sha256").update(`${d.companyName}|${d.subject}|${d.summary}|${d.stockCodes.join(",")}`).digest("hex").slice(0, 32);
     const title = d.companyName ? `${d.companyName} — ${d.subject}` : d.subject;

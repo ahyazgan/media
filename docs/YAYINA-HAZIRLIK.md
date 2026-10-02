@@ -29,9 +29,10 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
       `.../Bottom+Menu/Diger/RSS/Basin+Duyurulari`, takvim `.../Main+Menu/Duyurular/Takvim`. TÜİK: veriportali.tuik.gov.tr JSON API
       (`X-Requested-With` başlığı şart), takvim `www.tuik.gov.tr/Kurumsal/GetYillikHaberBulteniListesi?yil=`. Adresler değişirse
       `TCMB_FEED_URL`, `TUIK_BASE_URL`, `TCMB_CALENDAR_URL`, `TUIK_CALENDAR_URL`. Üretimde açmak: `pnpm db:seed -- --enable tcmb` / `tuik`.
-- [ ] **SPK / BDDK / EPDK / BOTAŞ:** 2026-10-02 yoklamasında dördü de çalışmadı (SPK/EPDK: liste yapısı değişmiş, BDDK: bağlantı
-      kurulamadı, BOTAŞ: engelleme sayfası). Adresler/seçiciler güncellenmeli (`--source spk` vb.); sonra `--enable`. Bu kaynaklar için altın örnek
-      yok; gerçek belgelerle en az 5'er örnek ekleyip `SOURCES` listesine alın (`packages/agents/test/golden.test.ts`).
+- [x] **SPK / BDDK / EPDK / BOTAŞ erişimi:** 2026-10-02'de yeni adreslere geçirildi ve canlıda doğrulandı (`pnpm --filter @kaynak/sources probe
+      spk bddk epdk botas`; gerçek modelle birer deneme: SPK yayın, BDDK/BOTAŞ inceleme, EPDK "haber değil"). Açmak: `--enable`.
+- [ ] **SPK / BDDK / EPDK / BOTAŞ altın örnekleri:** yok; gerçek belgelerle en az 5'er örnek ekleyip `SOURCES` listesine alın
+      (`packages/agents/test/golden.test.ts`).
 - [ ] **Altın örnekler:** `packages/agents/fixtures/{kap,tcmb,tuik}` sentetiktir; gerçek belgelerle değiştirip `LIVE=1 pnpm test:agents` koşun.
       Prompt değişikliği bu test geçmeden merge edilmez.
 - [ ] **İnsan onayı eşiği:** `REVIEW_THRESHOLD=4` ile başlayın; ilk haftalarda inceleme kuyruğunu günlük boşaltın, güven kazandıkça 5'e çekin.

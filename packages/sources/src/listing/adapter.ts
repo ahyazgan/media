@@ -32,6 +32,14 @@ export interface ListingOptions {
   /** Tarih bulunamazsa öğe alınsın mı (varsayılan true) */
   allowUndated?: boolean;
   defaultTime?: string;
+  /** Ek liste sayfaları (aynı kurumun başka kategorileri, ör. BDDK basın + mevzuat duyuruları). Adreslerde "{yil}" o yılla değişir. */
+  extraListUrls?: string[];
+  /** Başlık düzeltmesi (ör. SPK: "Bülten No : 2026/67 Yayımlanma : …" → "SPK Bülteni 2026/67") */
+  titleOf?: (item: ListingItem) => string;
+  /** Detay sayfasında ana içerik (menüler metne karışmasın); verilmezse sayfanın tamamı */
+  documentSelector?: string;
+  /** Detay sayfasındaki bu kalıba uyan ilk ek (PDF) asıl belgedir (BDDK: /Duyuru/EkGetir/…) */
+  attachmentPattern?: RegExp;
   section: { section: string; sectionLabel: string } | ((item: ListingItem) => { section: string; sectionLabel: string });
   http?: PoliteFetchOptions;
   now?: () => Date;
@@ -46,16 +54,36 @@ export class ListingAdapter implements SourceAdapter {
 
   schedule(): CronLike { return this.o.schedule; }
 
+  /** Taranacak liste adresleri ("{yil}" bugünün yılıyla) */
+  listUrls(now = (this.o.now ?? (() => new Date()))()): string[] {
+    const year = String(new Date(now.getTime() + 3 * 3_600_000).getUTCFullYear());
+    return [this.listUrl, ...(this.o.extraListUrls ?? [])].map((u) => u.split("{yil}").join(year));
+  }
+
   async fetchNew(since: Date): Promise<RawEvent[]> {
-    const res = await politeFetch(this.listUrl, this.o.http);
-    const html = decodeHtml(Buffer.from(await res.arrayBuffer()), res.headers.get("content-type"));
-    if (looksLikeBlockPage(html)) throw new StructureError(this.id, "liste yerine engelleme sayfası geldi", html.slice(0, 400));
-    if (this.parse(html).length === 0) throw new StructureError(this.id, "liste sayfasında duyuru bağlantısı bulunamadı; seçici ya da sayfa yapısı değişmiş olabilir", html.slice(0, 400));
-    return this.eventsFromHtml(html).filter((e) => e.payload["undated"] === true || e.publishedAt > since);
+    const out: RawEvent[] = [];
+    const all: RawEvent[] = [];
+    const seen = new Set<string>();
+    for (const listUrl of this.listUrls()) {
+      const res = await politeFetch(listUrl, this.o.http);
+      const html = decodeHtml(Buffer.from(await res.arrayBuffer()), res.headers.get("content-type"));
+      if (looksLikeBlockPage(html)) throw new StructureError(this.id, "liste yerine engelleme sayfası geldi", html.slice(0, 400));
+      if (this.parse(html, listUrl).length === 0) throw new StructureError(this.id, `liste sayfasında duyuru bağlantısı bulunamadı (${listUrl}); seçici ya da sayfa yapısı değişmiş olabilir`, html.slice(0, 400));
+      for (const e of this.eventsFromHtml(html, listUrl)) {
+        if (seen.has(e.externalId)) continue;
+        seen.add(e.externalId);
+        // Aynı duyuru birden çok kategoride ayrı numarayla yayımlanabilir (BDDK basın + kuruluş): aynı başlık, ≤7 gün → tek olay
+        const twin = all.find((x) => x.title === e.title && Math.abs(x.publishedAt.getTime() - e.publishedAt.getTime()) <= 7 * 86_400_000);
+        if (twin) continue;
+        all.push(e);
+        if (e.payload["undated"] === true || e.publishedAt > since) out.push(e);
+      }
+    }
+    return out;
   }
 
   /** Test edilebilir çekirdek: liste HTML → ListingItem[] */
-  parse(html: string): ListingItem[] {
+  parse(html: string, listUrl = this.listUrls()[0]!): ListingItem[] {
     const $ = cheerio.load(html);
     $("script, style, noscript, nav, header, footer").remove();
     const root = this.o.containerSelector && $(this.o.containerSelector).length ? $(this.o.containerSelector) : $("body");
@@ -66,8 +94,10 @@ export class ListingAdapter implements SourceAdapter {
       const href = ($a.attr("href") ?? "").trim();
       if (!href || href.startsWith("#") || /^(javascript|mailto|tel):/i.test(href)) return;
       let url: string;
-      try { url = new URL(href, this.listUrl).toString(); } catch { return; }
-      const title = ($a.text().replace(/\s+/g, " ").trim() || $a.attr("title") || "").trim();
+      try { url = new URL(href, listUrl).toString(); } catch { return; }
+      // Başa yazılmış "30.09.2026" tarihi başlıktan atılır (BDDK); tarih yine bağlamdan okunur
+      const rawTitle = ($a.text().replace(/\s+/g, " ").trim() || $a.attr("title") || "").trim();
+      const title = rawTitle.replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s+/, "").trim();
       if (!title || title.length < 4) return;
       if (this.o.linkPattern && !this.o.linkPattern.test(url)) return;
       if (this.o.titlePattern && !this.o.titlePattern.test(title)) return;
@@ -81,27 +111,46 @@ export class ListingAdapter implements SourceAdapter {
       const context = (kids.length > 1 ? kids.join(" | ") : node.text()).replace(/\s+/g, " ").trim().slice(0, 400);
       const date = findDate(title) ?? findDate(context) ?? findDate(decodeURIComponent(url).replace(/[_/]/g, " "));
       if (!date && this.o.allowUndated === false) return;
-      items.push({ title, url, date, publishedAt: date ? atIstanbul(date, this.o.defaultTime ?? "09:00") : (this.o.now ?? (() => new Date()))(), context });
+      const item: ListingItem = { title, url, date, publishedAt: date ? atIstanbul(date, this.o.defaultTime ?? "09:00") : (this.o.now ?? (() => new Date()))(), context };
+      if (this.o.titleOf) item.title = this.o.titleOf(item);
+      items.push(item);
     });
     return items;
   }
 
-  eventsFromHtml(html: string): RawEvent[] {
-    return this.parse(html).map((it) => this.toEvent(it));
+  eventsFromHtml(html: string, listUrl?: string): RawEvent[] {
+    return this.parse(html, listUrl).map((it) => this.toEvent(it, listUrl));
   }
 
-  toEvent(it: ListingItem): RawEvent {
+  toEvent(it: ListingItem, listUrl = this.listUrl): RawEvent {
     const sec = typeof this.o.section === "function" ? this.o.section(it) : this.o.section;
-    const payload = { ...sec, date: it.date ?? null, undated: !it.date, listUrl: this.listUrl, ext: /\.pdf(\?|$)/i.test(it.url) ? "pdf" : "html" };
+    const payload = { ...sec, date: it.date ?? null, undated: !it.date, listUrl, ext: /\.pdf(\?|$)/i.test(it.url) ? "pdf" : "html" };
     const payloadHash = createHash("sha256").update(`${it.title}|${it.url}`).digest("hex").slice(0, 32);
     return { sourceId: this.id, externalId: externalIdFor(it.url), title: it.title, url: it.url, publishedAt: it.publishedAt, payloadHash, payload };
   }
 
   async fetchDocument(ev: RawEvent): Promise<FetchedDocument> {
-    const res = await politeFetch(ev.url, this.o.http);
+    const doc = await this.download(ev.url);
+    if (doc.mime !== "text/html") return doc;
+    const html = decodeHtml(doc.bytes, "text/html");
+    const $ = cheerio.load(html);
+    const main = this.o.documentSelector ? $(this.o.documentSelector) : $("body");
+    if (this.o.attachmentPattern) {
+      const href = main.find("a[href]").toArray().map((a) => $(a).attr("href") ?? "").find((h) => this.o.attachmentPattern!.test(h));
+      if (href) return this.download(new URL(href, ev.url).toString());
+    }
+    if (this.o.documentSelector && main.length) {
+      const body = main.toArray().map((el) => $.html(el)).join("\n");
+      return { url: ev.url, mime: "text/html", bytes: Buffer.from(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${ev.title}</title></head><body><main>${body}</main></body></html>`, "utf8") };
+    }
+    return doc;
+  }
+
+  private async download(url: string): Promise<FetchedDocument> {
+    const res = await politeFetch(url, this.o.http);
     const bytes = Buffer.from(await res.arrayBuffer());
     const ct = res.headers.get("content-type") ?? "";
-    const mime = ct.includes("pdf") || /\.pdf(\?|$)/i.test(ev.url) || bytes.subarray(0, 5).toString("latin1") === "%PDF-" ? "application/pdf" : "text/html";
-    return { url: ev.url, mime, bytes };
+    const mime = ct.includes("pdf") || /\.pdf(\?|$)/i.test(url) || bytes.subarray(0, 5).toString("latin1") === "%PDF-" ? "application/pdf" : "text/html";
+    return { url, mime, bytes };
   }
 }
