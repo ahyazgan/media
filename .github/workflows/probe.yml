@@ -1,0 +1,21 @@
+# Kaynak sitelerinin yurt dışı bir IP'den (GitHub Actions makinesi) erişilebilir olup olmadığını yoklar: liste + ilk belge,
+# DB ve model yok. Sunucu seçimi (Türkiye mi, yurt dışı mı) için: Actions → "Kaynak yoklaması" → Run workflow.
+name: Kaynak yoklaması
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Çıkış IP'si
+        run: curl -s https://ipinfo.io/json || true
+      - name: Resmi Gazete (fihrist)
+        run: curl -s -o /dev/null -m 30 -w "%{http_code} %{time_total}s\n" https://www.resmigazete.gov.tr/ || echo "erişilemedi"
+      - name: Adapter yoklaması (8 kaynak + takvim)
+        run: pnpm --filter @kaynak/sources probe kap tcmb tuik spk bddk epdk botas calendar
