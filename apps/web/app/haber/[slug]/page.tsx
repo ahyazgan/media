@@ -60,6 +60,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <article className="k-article">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <Link href={`/kategori/${a.category}`} className="k-label">{categoryLabel(a.category)}</Link>
+        {a.isFlash && <span className="k-flash-tag">Flaş</span>}
         <h1 className="k-article__title">{a.title}</h1>
         <p className="k-article__dek">{a.dek}</p>
         <div className="k-article__byline">
@@ -67,6 +68,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <span>Bu haber resmi belgeden otomatik üretilmiş ve editör kurallarından geçmiştir.</span>
           <span>{a.publishedAt ? `Yayın: ${dateTimeLabel(a.publishedAt)}` : ""}{a.updatedAt.getTime() - (a.publishedAt?.getTime() ?? 0) > 60_000 ? ` · Güncelleme: ${dateTimeLabel(a.updatedAt)}` : ""}</span>
         </div>
+        {a.isFlash && (
+          <aside className="k-flash" role="status">
+            <b>Flaş haber.</b> Bu satır resmi belgenin yayımlandığı anda belgeden alındı; haberin ayrıntıları hazırlanıyor ve bu sayfa güncellenecek.
+          </aside>
+        )}
         {(a.status === "corrected" || a.status === "retracted") && (
           <aside className={`k-correction${a.status === "retracted" ? " k-correction--retracted" : ""}`} aria-label={a.status === "retracted" ? "Geri çekildi" : "Düzeltildi"}>
             <b>{a.status === "retracted" ? "Bu haber geri çekildi." : "Düzeltildi."}</b> {a.editorNote}

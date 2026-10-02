@@ -1,6 +1,6 @@
 import { findBanned, type BannedHit } from "./banned.js";
 import { numericGroundingCheck, type GroundingResult } from "./numericGrounding.js";
-import type { WriteOutput } from "../schemas.js";
+import type { FlashOutput, WriteOutput } from "../schemas.js";
 
 export type EditDecision = "publish" | "review" | "reject" | "retry";
 
@@ -108,4 +108,25 @@ export function quoteAppearsIn(quote: string, doc: string): boolean {
     from = at + p.length;
   }
   return true;
+}
+
+export interface FlashCheck { ok: boolean; reasons: string[] }
+
+/**
+ * Flaş denetimi (insan onayı olmadan yayımlandığı için katı): belgede olmayan sayı, yasaklı kalıp (yalnızca kurumun kendi
+ * tahmini belgede geçiyorsa "tahmin" serbest — tam metindeki istisnanın aynısı), başlık > 90 ya da cümle > 320 karakter → yayımlanmaz. Tam metin her durumda ayrıca yazılır ve kendi kurallarından geçer.
+ */
+export function checkFlash(f: FlashOutput, documentText: string, opts: { groundingExtra?: string } = {}): FlashCheck {
+  const reasons: string[] = [];
+  const headline = f.headline.trim();
+  const sentence = f.sentence.trim();
+  if (!headline || !sentence) reasons.push("flaş: boş başlık ya da cümle");
+  if (headline.length > 90) reasons.push(`flaş: başlık ${headline.length} karakter (en fazla 90)`);
+  if (sentence.length > 320) reasons.push(`flaş: cümle ${sentence.length} karakter (en fazla 320)`);
+  const g = numericGroundingCheck(f.numbersUsed, `${headline}\n${sentence}`, opts.groundingExtra ? `${documentText}\n${opts.groundingExtra}` : documentText);
+  if (!g.ok) reasons.push(`flaş: belgede bulunamayan sayılar: ${g.missing.join(", ")}`);
+  const docLower = documentText.toLocaleLowerCase("tr");
+  const banned = findBanned({ title: headline, dek: sentence }).filter((b) => !(b.id in SOURCE_ATTRIBUTABLE && docLower.includes(SOURCE_ATTRIBUTABLE[b.id]!)));
+  if (banned.length) reasons.push(`flaş: yasaklı ifade: ${banned.map((b) => b.match).join(", ")}`);
+  return { ok: reasons.length === 0, reasons };
 }

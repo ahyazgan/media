@@ -14,7 +14,10 @@ export default async function ReviewDetail({ params, searchParams }: { params: P
   const r = await articleForAdmin(id);
   if (!r) notFound();
   const { article: a, document: doc, event: ev, queue } = r;
-  const editable = a.status === "review" || a.status === "draft";
+  // Flaş yayındaysa kuyruktaki iş bekleyen tam metindir (pendingDraft; otomatik tam metin reddedildiyse editör yazar)
+  const flashLive = a.isFlash && a.status === "published";
+  const editable = a.status === "review" || a.status === "draft" || flashLive;
+  const d = flashLive ? (a.pendingDraft ?? { title: a.title, dek: a.dek, bodyMarkdown: a.bodyMarkdown, keyFacts: a.keyFacts }) : a;
   return (
     <div className="k-admin__split">
       <div>
@@ -25,12 +28,13 @@ export default async function ReviewDetail({ params, searchParams }: { params: P
           {sourceLabel(ev?.sourceId)} · {categoryLabel(a.category)} · önem {a.importance} · durum <b>{a.status}</b>{queue ? ` · kuyruk: ${queue.reason}` : ""}<br />
           {ev && <>Olay: <a href={ev.url} target="_blank" rel="noopener">{ev.title}</a> · {dateTimeLabel(ev.publishedAt)}</>}
         </p>
+        {flashLive && <p className="k-admin__flash">Flaş yayında (<Link href={`/haber/${a.slug}`}>haberi aç</Link>): “{a.title}”. Aşağıdaki tam metni onaylarsanız aynı adreste flaşın yerine geçer; dağıtım (Telegram/X/bildirim) tekrarlanmaz. Reddederseniz flaş olduğu gibi kalır.{!a.pendingDraft && " Otomatik tam metin reddedildi; metni siz yazın."}</p>}
         {!editable && <p className="k-admin__flash">Bu makale artık kuyrukta değil (durum: {a.status}).{a.status === "published" && <> <Link href={`/haber/${a.slug}`}>Haberi aç →</Link></>}</p>}
         <form action={publishReviewAction} className="k-admin__form">
           <input type="hidden" name="id" value={a.id} />
-          <label>Başlık <span className="k-muted">({a.title.length}/70)</span><input name="title" defaultValue={a.title} maxLength={70} required /></label>
-          <label>Dek<textarea name="dek" defaultValue={a.dek} rows={2} required /></label>
-          <label>Gövde (Markdown)<textarea name="bodyMarkdown" defaultValue={a.bodyMarkdown} rows={18} required /></label>
+          <label>Başlık <span className="k-muted">({d.title.length}/70)</span><input name="title" defaultValue={d.title} maxLength={70} required /></label>
+          <label>Dek<textarea name="dek" defaultValue={d.dek} rows={2} required /></label>
+          <label>Gövde (Markdown)<textarea name="bodyMarkdown" defaultValue={d.bodyMarkdown} rows={18} required /></label>
           <label>Editör notu (haber sayfasında görünmez)<input name="note" placeholder="isteğe bağlı" /></label>
           <div className="k-admin__actions">
             <button type="submit" className="k-btn" disabled={!editable}>Yayınla</button>
@@ -42,7 +46,7 @@ export default async function ReviewDetail({ params, searchParams }: { params: P
           <button type="submit" className="k-btn k-btn--ghost" disabled={!editable}>Reddet</button>
         </form>
         <h3>Belgede ne diyor (keyFacts)</h3>
-        <ol style={{ fontSize: 14 }}>{a.keyFacts.map((k, i) => <li key={i}><b>{k.text}</b><br /><i className="k-muted">“{k.quoteFromSource}”</i></li>)}</ol>
+        <ol style={{ fontSize: 14 }}>{d.keyFacts.map((k, i) => <li key={i}><b>{k.text}</b><br /><i className="k-muted">“{k.quoteFromSource}”</i></li>)}</ol>
         {a.editorNote && <p className="k-muted" style={{ fontSize: 13 }}>Kural motoru: {a.editorNote}</p>}
       </div>
       <aside>

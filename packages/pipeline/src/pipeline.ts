@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { type Db, rawEvents, documents, articles, reviewQueue, companies, companyEvents, type RawEventRow } from "@kaynak/db";
-import type { ClassifyOutput, WriteOutput, EditResult } from "@kaynak/agents";
-import { runEditRules } from "@kaynak/agents";
+import { type Article, type Db, rawEvents, documents, articles, reviewQueue, companies, companyEvents, type RawEventRow } from "@kaynak/db";
+import type { ClassifyOutput, WriteOutput, EditResult, FlashInput, FlashOutput } from "@kaynak/agents";
+import { checkFlash, runEditRules } from "@kaynak/agents";
 import { documentToText, type RawEvent, type SourceAdapter } from "@kaynak/sources";
 import type { BlobStore } from "./storage.js";
 import { storageKeyFor } from "./storage.js";
@@ -16,6 +16,8 @@ export interface Agents {
     sourceId: string; sourceName: string; sourceUrl: string; title: string; documentText: string;
     publishedAt: string; classify: ClassifyOutput; avoidPhrases?: string[]; stockCodes?: string[];
   }): Promise<WriteOutput>;
+  /** Flaş: belgeden tek cümle (hızlı model); yoksa flaş üretilmez */
+  flash?(input: FlashInput): Promise<FlashOutput>;
 }
 
 export interface PipelineDeps {
@@ -26,6 +28,10 @@ export interface PipelineDeps {
   sourceNames?: Record<string, string>;
   log?: (msg: string, meta?: Record<string, unknown>) => void;
   onPublished?: (article: typeof articles.$inferSelect, ctx: { sourceId: string }) => Promise<void>;
+  /** Yayındaki makale güncellendiğinde (flaş → tam metin): yalnızca sayfa yenileme, dağıtım tekrarlanmaz */
+  onUpdated?: (article: typeof articles.$inferSelect, ctx: { sourceId: string }) => Promise<void>;
+  /** Flaş: hangi kaynaklarda, hangi önemden itibaren (verilmezse kapalı) */
+  flash?: { sources: string[]; minImportance: number };
 }
 
 /** Kaynak kimliği → görünen ad (yazar ajanına ve arayüze gider). */
@@ -88,8 +94,18 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   }).returning();
   if (!doc) throw new Error("document insert failed");
 
-  // classify
+  // Borsa kodları kaynağın resmi listesinden (KAP PDF'inde kod geçmez; model tahmin etmesin)
+  const stockCodes = companyRefsOf(row.payload).map((c) => c.code);
+  // Yazara verilen yayın zamanı (resmi listeden) sayı kontrolünde belgeye eşdeğer sayılır
+  const groundingExtra = istanbulStamp(row.publishedAt);
+
+  // classify — flaşa uygun kaynakta flaş yazımı paralel başlar (haber değilse sonucu atılır)
   const section = typeof row.payload["section"] === "string" ? (row.payload["section"] as string) : undefined;
+  const flashEligible = Boolean(deps.flash && deps.agents.flash && adapter.official && deps.flash.sources.includes(row.sourceId));
+  const flashP = flashEligible
+    ? deps.agents.flash!({ sourceId: row.sourceId, sourceName, title: row.title, textHead: text.slice(0, 6000), ...(stockCodes.length ? { stockCodes } : {}) })
+      .catch((e: Error) => { log("flash:error", { externalId: row.externalId, error: e.message }); return undefined; })
+    : undefined;
   const cls = await deps.agents.classify({ sourceId: row.sourceId, title: row.title, textHead: text.slice(0, 2000), section });
   log("classify", { externalId: row.externalId, ...cls });
 
@@ -107,17 +123,38 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   if (overlap < 2) forceReview = `verify: başlık ile belge arasında yalnızca ${overlap} anahtar kelime örtüşüyor`;
   if (!adapter.official) forceReview = "verify: resmi olmayan kaynak — ikinci bağımsız kaynak gerekir";
 
+  // Flaş: önemli haber, resmi kaynak, doğrulama sorunu yok, flaş kurallarından geçti → hemen yayın ve dağıtım.
+  // Tam metin aynı makaleyi (aynı adresi) günceller; onay gerekirse flaş yayında kalır, tam metin pendingDraft'ta bekler.
+  let flashArticle: Article | undefined;
+  if (flashP && !forceReview && cls.importance >= deps.flash!.minImportance) {
+    const f = await flashP;
+    const check = f ? checkFlash(f, text, { groundingExtra }) : { ok: false, reasons: ["flaş üretilemedi"] };
+    if (f && check.ok) {
+      const now = new Date();
+      const [fa] = await deps.db.insert(articles).values({
+        slug: makeSlug(f.headline), status: "published", category: cls.category, importance: cls.importance,
+        // Gövde boş: cümle dek'te; sayfa aynı cümleyi iki kez göstermesin (tam metin gelince dolar)
+        title: f.headline.trim(), dek: f.sentence.trim(), bodyMarkdown: "", keyFacts: [],
+        tickers: companyCodes, tags: ["flas"], sourceUrl: fetched.url, documentId: doc.id, rawEventId: row.id,
+        publishedAt: now, updatedAt: now, isFlash: true, editorNote: "flaş (otomatik): tam metin yazılıyor",
+      }).returning();
+      if (!fa) throw new Error("flash insert failed");
+      flashArticle = fa;
+      log("flash:publish", { externalId: row.externalId, slug: fa.slug, ms: now.getTime() - row.createdAt.getTime() });
+      await snapshotArticle(deps.db, fa, "flaş (otomatik)");
+      await deps.onPublished?.(fa, { sourceId: row.sourceId });
+    } else {
+      log("flash:skip", { externalId: row.externalId, reasons: check.reasons });
+    }
+  }
+
   // write (+ yasaklı kalıpta bir kez tekrar)
-  // Borsa kodları kaynağın resmi listesinden (KAP PDF'inde kod geçmez; model tahmin etmesin)
-  const stockCodes = companyRefsOf(row.payload).map((c) => c.code);
   const writeInput = {
     sourceId: row.sourceId, sourceName, sourceUrl: fetched.url, title: row.title,
     documentText: text, publishedAt: row.publishedAt.toISOString(), classify: cls,
     ...(stockCodes.length ? { stockCodes } : {}),
   };
   let draft = await deps.agents.write(writeInput);
-  // Yazara verilen yayın zamanı (resmi listeden) sayı kontrolünde belgeye eşdeğer sayılır
-  const groundingExtra = istanbulStamp(row.publishedAt);
   // Uzunluk alt sınırı kaynağın sabit kalıplarından arınmış metne göre (KAP: sorumluluk beyanı ve "Özet Bilgi" alanları)
   const lengthBasisText = adapter.contentText?.(text);
   let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra, lengthBasisText });
@@ -127,8 +164,6 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra, lengthBasisText });
   }
 
-  // articles kaydı
-  const slug = makeSlug(draft.title);
   const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview ? "published" : "review";
   const reasons = [...edit.reasons, ...(forceReview ? [forceReview] : [])];
   const now = new Date();
@@ -136,22 +171,55 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   const docUpper = text.toLocaleUpperCase("tr");
   const groundedTickers = draft.tickers.map((t) => t.trim().toUpperCase()).filter((t) => /^[A-Z0-9]{3,6}$/.test(t)).filter((t) => stockCodes.includes(t) || new RegExp(`(^|[^A-Z0-9])${t}([^A-Z0-9]|$)`).test(docUpper));
   const tickers = [...new Set([...companyCodes, ...groundedTickers])];
+
+  // Flaş yayındaysa ve tam metin reddedilmediyse: aynı makale güncellenir (yeni satır yok)
+  if (flashArticle && status !== "rejected") {
+    await deps.db.update(rawEvents).set({ status: "processed" }).where(eq(rawEvents.id, row.id));
+    if (companyCodes.length) {
+      await deps.db.update(companyEvents).set({ articleId: flashArticle.id })
+        .where(and(eq(companyEvents.rawEventId, row.id), inArray(companyEvents.kapCode, companyCodes)));
+    }
+    const full = { title: draft.title, dek: draft.dek, bodyMarkdown: draft.bodyMarkdown, keyFacts: draft.keyFacts, tags: draft.tags, tickers };
+    if (status === "review") {
+      await deps.db.update(articles).set({ pendingDraft: full, updatedAt: now, editorNote: `flaş yayında; tam metin onay bekliyor: ${reasons.join(" | ")}` })
+        .where(eq(articles.id, flashArticle.id));
+      await deps.db.insert(reviewQueue).values({ articleId: flashArticle.id, reason: `flaş yayında — tam metin: ${reasons.join(" | ") || "insan onayı"}` });
+      log("edit:review", { externalId: row.externalId, reasons, flash: flashArticle.slug });
+      return { kind: "review", articleId: flashArticle.id, reasons };
+    }
+    const [updated] = await deps.db.update(articles).set({ ...full, isFlash: false, pendingDraft: null, updatedAt: now, editorNote: null })
+      .where(eq(articles.id, flashArticle.id)).returning();
+    log("publish", { externalId: row.externalId, slug: flashArticle.slug, replacedFlash: true });
+    await snapshotArticle(deps.db, updated!, "tam metin (otomatik, flaşın yerine)");
+    await linkCalendarFor(deps, row, updated!.id, log);
+    // Dağıtım flaşla yapıldı; burada yalnızca sayfalar yenilenir
+    await (deps.onUpdated ?? deps.onPublished)?.(updated!, { sourceId: row.sourceId });
+    return { kind: "published", articleId: updated!.id, slug: updated!.slug };
+  }
+
+  // articles kaydı
+  const slug = makeSlug(draft.title);
   const [article] = await deps.db.insert(articles).values({
     slug, status, category: cls.category, importance: cls.importance,
     title: draft.title, dek: draft.dek, bodyMarkdown: draft.bodyMarkdown, keyFacts: draft.keyFacts,
     tickers, tags: draft.tags, sourceUrl: fetched.url, documentId: doc.id, rawEventId: row.id,
     publishedAt: status === "published" ? now : null, updatedAt: now,
-    editorNote: reasons.length ? reasons.join(" | ") : null,
+    editorNote: [...reasons, ...(flashArticle ? [`flaş yayında: /haber/${flashArticle.slug}`] : [])].join(" | ") || null,
   }).returning();
   if (!article) throw new Error("article insert failed");
   await deps.db.update(rawEvents).set({ status: "processed" }).where(eq(rawEvents.id, row.id));
-  if (companyCodes.length) {
+  if (companyCodes.length && !flashArticle) {
     await deps.db.update(companyEvents).set({ articleId: article.id })
       .where(and(eq(companyEvents.rawEventId, row.id), inArray(companyEvents.kapCode, companyCodes)));
   }
 
   if (status === "rejected") {
-    log("edit:reject", { externalId: row.externalId, reasons });
+    log("edit:reject", { externalId: row.externalId, reasons, ...(flashArticle ? { flash: flashArticle.slug } : {}) });
+    if (flashArticle) {
+      // Flaş yayında kalır (kendi kurallarından geçti); editör tam metni elle yazabilir
+      await deps.db.update(articles).set({ editorNote: `flaş yayında; otomatik tam metin reddedildi: ${reasons.join(" | ")}`, updatedAt: now }).where(eq(articles.id, flashArticle.id));
+      await deps.db.insert(reviewQueue).values({ articleId: flashArticle.id, reason: `flaş yayında — tam metin reddedildi: ${reasons.join(" | ")}` });
+    }
     return { kind: "rejected", articleId: article.id, reasons };
   }
   if (status === "review") {
@@ -161,12 +229,15 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   }
   log("publish", { externalId: row.externalId, slug });
   await snapshotArticle(deps.db, article, "ilk yayın (otomatik)");
-  if (row.sourceId === "tcmb" || row.sourceId === "tuik") {
-    const linked = await linkCalendarEvent(deps.db, row.sourceId, article.id, row.publishedAt);
-    if (linked) log("calendar:link", { externalId: row.externalId, calendarEventId: linked });
-  }
+  await linkCalendarFor(deps, row, article.id, log);
   await deps.onPublished?.(article, { sourceId: row.sourceId });
   return { kind: "published", articleId: article.id, slug };
+}
+
+async function linkCalendarFor(deps: PipelineDeps, row: RawEventRow, articleId: string, log: (m: string, meta?: Record<string, unknown>) => void) {
+  if (row.sourceId !== "tcmb" && row.sourceId !== "tuik") return;
+  const linked = await linkCalendarEvent(deps.db, row.sourceId, articleId, row.publishedAt);
+  if (linked) log("calendar:link", { externalId: row.externalId, calendarEventId: linked });
 }
 
 /** İşlenmemiş (status=new) event'leri sırayla işler. */

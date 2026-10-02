@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { adInquiries, correctionRequests, rawEvents } from "@kaynak/db";
+import { adInquiries, articles, correctionRequests, rawEvents } from "@kaynak/db";
 import { publishCorrection, publishFromReview, rejectFromReview, retractArticle } from "@kaynak/pipeline/editorial";
 import { retryFailure } from "@kaynak/pipeline/failures";
 import { getDb } from "@/lib/db";
@@ -22,8 +22,10 @@ export async function publishReviewAction(fd: FormData) {
   const id = str(fd, "id");
   const { db } = await getDb();
   try {
+    const [before] = await db.select({ isFlash: articles.isFlash }).from(articles).where(eq(articles.id, id)).limit(1);
     const a = await publishFromReview(db, id, { by: await editorName(), patch: { title: str(fd, "title"), dek: str(fd, "dek"), bodyMarkdown: str(fd, "bodyMarkdown") }, note: str(fd, "note") || undefined });
-    await afterPublish(a, await sourceIdOf(a.rawEventId));
+    // Flaş zaten dağıtıldı: tam metin onayında yalnızca sayfalar yenilenir
+    await afterPublish(a, await sourceIdOf(a.rawEventId), { distribute: !before?.isFlash });
     revalidatePath("/admin"); revalidatePath("/admin/inceleme");
     back("/admin/inceleme", `Yayınlandı: /haber/${a.slug}`);
   } catch (e) {

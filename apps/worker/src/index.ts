@@ -11,7 +11,7 @@ import { rawEvents, sources } from "@kaynak/db";
 import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, watchDelaySeconds, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import {
-  createMailer, createPushSender, createStore, fakeAgents, ingestEvents, calendarTiming, istanbulDate, liveAgents, loadEnv, makeOnPublished,
+  createMailer, createPushSender, createStore, fakeAgents, ingestEvents, calendarTiming, istanbulDate, liveAgents, loadEnv, makeOnPublished, makeOnUpdated, flashConfigFrom,
   alertIfNeeded, checkSources, createAlerter, recordWatch, msUntilNext, persistDailyMetrics, processEvent, recordFailure, sendBulletin, SOURCE_NAMES, syncCalendar, syncMarketQuotes, type PipelineDeps,
 } from "@kaynak/pipeline";
 
@@ -36,6 +36,7 @@ const deps: PipelineDeps = {
   db: handle.db, agents: hasApiKey() ? liveAgents : fakeAgents, store: await createStore(env),
   reviewThreshold: env.REVIEW_THRESHOLD, sourceNames: SOURCE_NAMES, log,
   onPublished: makeOnPublished(env, { db: handle.db, push, log }),
+  onUpdated: makeOnUpdated(env), flash: flashConfigFrom(env),
 };
 
 // Kaynak sağlığı: yapı değişikliği, TLS/robots sorunu ya da uzun sessizlikte uyarı (ALERT_EMAIL / ALERT_TELEGRAM_CHAT_ID).

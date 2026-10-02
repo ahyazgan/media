@@ -70,6 +70,21 @@ describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
     for (const p of expected.mustNotContain) expect(text).not.toContain(p.toLocaleLowerCase("tr"));
     expect(w.title.length).toBeLessThanOrEqual(70);
   });
+
+  // Flaş insan onayı beklemeden yayımlandığı için ayrı ve katı: flaş açık kaynaklardaki her haber örneği kurallardan geçmeli
+  const flashDirs = dirs.filter((d) => /^(tcmb|tuik|kap)\//.test(d));
+  it.each(flashDirs)("%s: flash + checkFlash", async (d) => {
+    const { flash } = await import("../src/flash.js");
+    const { checkFlash } = await import("../src/edit/rules.js");
+    const { doc, event, expected } = load(d);
+    if (expected.classify.isNews === false) return;
+    const stockCodes = (event as { payload?: { stockCodes?: string[] } }).payload?.stockCodes;
+    const f = await flash({ sourceId: event.sourceId, sourceName: event.sourceName, title: event.title, textHead: doc.slice(0, 6000), stockCodes });
+    const r = checkFlash(f, doc);
+    expect(r.ok, `${r.reasons.join("; ")} | ${f.headline} | ${f.sentence}`).toBe(true);
+    const text = `${f.headline}\n${f.sentence}`.toLocaleLowerCase("tr");
+    for (const p of expected.mustNotContain) expect(text).not.toContain(p.toLocaleLowerCase("tr"));
+  });
 });
 
 it("fixture klasörü mevcut", () => expect(existsSync(ROOT)).toBe(true));

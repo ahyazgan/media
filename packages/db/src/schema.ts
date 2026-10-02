@@ -46,6 +46,8 @@ export const documents = pgTable("documents", {
 }, (t) => [index("documents_raw_event").on(t.rawEventId)]);
 
 export type KeyFact = { text: string; quoteFromSource: string };
+/** Flaş yayındayken onay bekleyen tam metin (editör onaylayınca flaşın yerine geçer) */
+export type PendingDraft = { title: string; dek: string; bodyMarkdown: string; keyFacts: KeyFact[]; tags: string[]; tickers: string[] };
 
 export const articles = pgTable("articles", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -66,6 +68,9 @@ export const articles = pgTable("articles", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   editorNote: text("editor_note"),
+  /** Flaş: belgeden tek cümlelik ilk haber; tam metin hazırlanınca aynı makale (aynı adres) güncellenir */
+  isFlash: boolean("is_flash").notNull().default(false),
+  pendingDraft: jsonb("pending_draft").$type<PendingDraft>(),
 }, (t) => [
   uniqueIndex("articles_slug").on(t.slug),
   index("articles_status_published").on(t.status, t.publishedAt),

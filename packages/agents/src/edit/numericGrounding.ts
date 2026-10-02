@@ -22,9 +22,13 @@ const TEXT_DATE_LOOSE_RE = /(?<!\d)(\d{1,2})\s+(ocak|şubat|subat|mart|nisan|may
 const TEXT_DATE_EXACT_RE = /^(\d{1,2})\s+(ocak|şubat|subat|mart|nisan|mayıs|mayis|haziran|temmuz|ağustos|agustos|eylül|eylul|ekim|kasım|kasim|aralık|aralik)(?:\s+(\d{4}))?$/iu;
 const NUM_DATE_RE = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/;
 const SCALE: Record<string, number> = { bin: 1e3, milyon: 1e6, milyar: 1e9, trilyon: 1e12 };
-/** "14 trilyon 872 milyar 415 milyon" gibi zincirler dahil */
-const SCALED_RE = /(?<![\p{L}\d])\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?![\p{L}])(?:\s+\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?![\p{L}]))*/giu;
-const SCALED_ONE_RE = /(?<![\p{L}\d])\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?![\p{L}])(?:\s+\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?![\p{L}]))*/iu;
+/**
+ * "14 trilyon 872 milyar 415 milyon" gibi zincirler dahil; büyüklük sözcüğü Türkçe ek alabilir ("400 milyondan", "1 milyara",
+ * "binde"). Ekler sınırlı listedir: "bina", "binlerce" gibi sözcükler sayı sayılmasın.
+ */
+// Zincir yalnızca eksiz parçalar arasında kurulur ("2 milyon 986 bin"); ek yalnızca son parçada ("400 milyondan 1 milyara" iki ayrı sayı)
+const SCALED_RE = /(?<![\p{L}\d])\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?:(?![\p{L}])\s+\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin))*(?:'?(?:d[ae]n|t[ae]n|d[ae]|t[ae]|y?[ae]|l[ıi]k|n[ıi]n|[ıi]n))?(?![\p{L}])/giu;
+const SCALED_ONE_RE = new RegExp(SCALED_RE.source, "iu");
 const SCALE_PART_RE = /(\d[\d.,]*)\s*(trilyon|milyar|milyon|bin)/giu;
 const TIME_COLON_RE = /(?<!\d)([01]?\d|2[0-3]):([0-5]\d)(?!\d)/g;
 const TIME_SAAT_RE = /saat\s+([01]?\d|2[0-3])[.:]([0-5]\d)(?!\d)/giu;
@@ -122,7 +126,9 @@ export function extractNumbers(text: string): string[] {
 
 export interface DocIndex { tokens: Set<string>; values: number[] }
 
-export function indexDocument(text: string): DocIndex {
+export function indexDocument(raw: string): DocIndex {
+  // PDF'ten çıkan form alanlarında etiket ile değer bitişebilir ("Onay Tarihi24.06.2026"): harf–rakam sınırına boşluk konur
+  const text = raw.replace(/(\p{L})(\d)/gu, "$1 $2");
   const tokens = new Set<string>();
   const values: number[] = [];
   const addValue = (v: number | undefined) => { if (v !== undefined) { values.push(v); tokens.add(vkey(v)); } };
@@ -166,6 +172,9 @@ function grounded(c: string, idx: DocIndex): boolean {
   // 2) saat
   const tm = TIME_EXACT_RE.exec(t);
   if (tm) return idx.tokens.has(tkey(tm[1]!, tm[2]!));
+  // noktalı saat ("17.48.10", "10.30"): belgede o saat varsa kabul; yoksa düz sayı olarak denetlenmeye devam eder
+  const td = /^([01]?\d|2[0-3])\.([0-5]\d)(?:\.([0-5]\d))?$/.exec(t);
+  if (td && idx.tokens.has(tkey(td[1]!, td[2]!))) return true;
   // 3) tarih (tam ya da yılsız)
   const dk = dateKey(t);
   if (dk) return idx.tokens.has(dk);
@@ -187,7 +196,16 @@ export interface GroundingResult { ok: boolean; missing: string[]; checked: numb
 
 export function numericGroundingCheck(numbersUsed: string[], articleText: string, documentText: string): GroundingResult {
   const idx = indexDocument(documentText);
-  const candidates = new Set<string>([...numbersUsed, ...compositeTokens(articleText, true)]);
+  // Yazarın listelediği çıplak sayı metinde yalnızca büyüklük sözcüğünün parçasıysa ("2.115 milyon" içindeki "2.115") ayrıca
+  // aranmaz: ifadenin tamamı değeriyle doğrulanır (aksi halde "2.115" binlik ayraçlı 2115 sanılıp yanlışlıkla reddedilir)
+  const scaledParts = new Set<string>();
+  for (const m of articleText.matchAll(SCALED_RE)) for (const p of m[0].matchAll(SCALE_PART_RE)) scaledParts.add(p[1]!.replace(/[.,]+$/, ""));
+  // Metin verildiyse: yazarın listesinden yalnızca metinde gerçekten geçen sayılar denetlenir (listeye fazladan yazılan, yayımlanmayan
+  // sayı haberi düşürmesin); metindeki her sayı zaten compositeTokens ile ayrıca denetlenir. Metin boşsa liste olduğu gibi denetlenir.
+  const textNorms = new Set(extractNumbers(articleText).map(normalizeNumber));
+  const inText = (n: string) => !articleText.trim() || articleText.includes(n.trim()) || splitParts(n).every((p) => textNorms.has(normalizeNumber(p)));
+  const used = numbersUsed.filter((n) => !scaledParts.has(n.trim()) && inText(n));
+  const candidates = new Set<string>([...used, ...compositeTokens(articleText, true)]);
   const missing = [...candidates].filter((c) => !grounded(c, idx));
   return { ok: missing.length === 0, missing, checked: candidates.size };
 }

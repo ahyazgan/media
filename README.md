@@ -54,6 +54,16 @@ pnpm --filter @kaynak/sources capture:kap     # gerçek liste JSON'unu fixture o
 
 Docker ile tam kurulum: `docker compose up -d postgres redis minio`, `.env` içinde `DATABASE_URL=postgres://…` ve `REDIS_URL=redis://localhost:6379`, sonra `pnpm dev:worker`.
 
+## Hız: flaş ve yayın anı taraması
+
+- **Flaş** (`FLASH_SOURCES`, `FLASH_MIN_IMPORTANCE`): önemi ≥ 4 olan TCMB/TÜİK/KAP belgelerinde hızlı model (MODEL_CLASSIFY) sınıflandırmayla paralel
+  tek cümlelik flaş yazar (canlı ölçüm 1,6–3,8 sn). `checkFlash`: belgede olmayan sayı, yasaklı kalıp, başlık > 90 / cümle > 320 karakter → yayımlanmaz.
+  Geçen flaş hemen yayımlanır ve dağıtılır (Telegram/X/push). Tam metin aynı makaleyi (aynı adres) günceller: otomatik yayına uygunsa yerinde
+  (sürüm saklanır, dağıtım tekrarlanmaz), onay gerekiyorsa `pendingDraft`'ta bekler ve inceleme ekranında flaşın yerine geçecek metin olarak
+  görünür; reddedilirse flaş kalır. Haber sayfasında "Flaş" etiketi.
+- **Yayın anı taraması:** takvimdeki yayın anının 1 dk öncesinden 5 dk sonrasına TCMB/TÜİK 5 sn'de bir (`calendarTiming`, `watchDelaySeconds`);
+  Resmi Gazete 23:58–00:10 arası 15 sn (geçmiş günlerin fihristi 10 dk önbellekte). Bekleme hiçbir zaman bir sonraki yayın penceresini aşmaz.
+
 ## Takvim, PWA ve dağıtım (Faz 3)
 
 ```bash

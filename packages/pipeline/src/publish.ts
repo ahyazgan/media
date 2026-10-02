@@ -36,6 +36,19 @@ export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {
   };
 }
 
+/** Yayındaki makale güncellendiğinde (flaş → tam metin): yalnızca sayfalar yenilenir; Telegram/X/push tekrarlanmaz. */
+export function makeOnUpdated(env: Env, hooks: PublishHooks | typeof fetch = {}) {
+  const h: PublishHooks = typeof hooks === "function" ? { fetchImpl: hooks } : hooks;
+  const fetchImpl = h.fetchImpl ?? fetch;
+  return async (a: Article, ctx?: { sourceId: string }): Promise<void> => { await revalidate(env, a, fetchImpl, ctx?.sourceId); };
+}
+
+/** FLASH_SOURCES / FLASH_MIN_IMPORTANCE → pipeline flaş ayarı (boş liste = kapalı) */
+export function flashConfigFrom(env: Pick<Env, "FLASH_SOURCES" | "FLASH_MIN_IMPORTANCE">): { sources: string[]; minImportance: number } | undefined {
+  const sources = env.FLASH_SOURCES.split(",").map((s) => s.trim()).filter(Boolean);
+  return sources.length ? { sources, minImportance: env.FLASH_MIN_IMPORTANCE } : undefined;
+}
+
 export function pathsFor(a: Article, sourceId?: string): string[] {
   // RSS ve haber site haritası da hemen yenilenir: toplayıcılar ve Google News 5 dk önbelleği beklemesin.
   const paths = ["/", `/haber/${a.slug}`, `/kategori/${a.category}`, "/rss.xml", "/news-sitemap.xml", "/sitemap.xml"];

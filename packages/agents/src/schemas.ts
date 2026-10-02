@@ -53,3 +53,20 @@ export interface WriteInput {
   /** Kaynağın resmi listesindeki borsa kodları (KAP: bildirim PDF'inde kod geçmez, liste kaydından gelir) */
   stockCodes?: string[];
 }
+
+/** Flaş: belgeden tek cümlelik ilk haber (tam metin hazırlanırken yayımlanır) */
+export const FlashOutput = z.object({
+  headline: z.string(),
+  sentence: z.string(),
+  numbersUsed: z.array(z.string()),
+});
+export type FlashOutput = z.infer<typeof FlashOutput>;
+
+export interface FlashInput {
+  sourceId: string;
+  sourceName: string;
+  title: string;
+  /** Belgenin ilk ~6.000 karakteri */
+  textHead: string;
+  stockCodes?: string[];
+}

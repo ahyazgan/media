@@ -41,6 +41,7 @@ async function resolveQueue(db: Db, articleId: string, by: string) {
 /** İnceleme kuyruğundaki taslağı yayınlar (isteğe bağlı başlık/dek/gövde düzenlemesiyle). v1 anlık görüntüsü alınır. */
 export async function publishFromReview(db: Db, articleId: string, opts: { by: string; patch?: Partial<Pick<Article, "title" | "dek" | "bodyMarkdown">>; note?: string }): Promise<Article> {
   const a = await getArticle(db, articleId);
+  if (a.isFlash && a.status === "published") return publishFlashFull(db, a, opts);
   if (a.status !== "review" && a.status !== "draft") throw new Error(`yayınlanamaz: durum ${a.status}`);
   const now = new Date();
   const [updated] = await db.update(articles).set({
@@ -52,9 +53,29 @@ export async function publishFromReview(db: Db, articleId: string, opts: { by: s
   return updated!;
 }
 
-/** İnceleme kuyruğundaki taslağı reddeder; kayıt `rejected` olarak kalır (ölçütler için). */
+/**
+ * Flaş yayındayken tam metnin onayı: bekleyen taslak (yoksa editörün yazdığı) flaşın yerine geçer. Önceki hâl sürüm olarak
+ * saklanır; yayın saati flaşınki kalır; dağıtım tekrarlanmaz (çağıran yalnızca sayfaları yeniler).
+ */
+async function publishFlashFull(db: Db, a: Article, opts: { by: string; patch?: Partial<Pick<Article, "title" | "dek" | "bodyMarkdown">>; note?: string }): Promise<Article> {
+  const pd = a.pendingDraft;
+  const [updated] = await db.update(articles).set({
+    ...(pd ? { title: pd.title, dek: pd.dek, bodyMarkdown: pd.bodyMarkdown, keyFacts: pd.keyFacts, tags: pd.tags, tickers: pd.tickers } : {}),
+    ...(opts.patch ?? {}), isFlash: false, pendingDraft: null, updatedAt: new Date(), editorNote: opts.note ?? null,
+  }).where(eq(articles.id, a.id)).returning();
+  await resolveQueue(db, a.id, opts.by);
+  await snapshotArticle(db, updated!, `tam metin flaşın yerine (insan onayı: ${opts.by})`);
+  return updated!;
+}
+
+/** İnceleme kuyruğundaki taslağı reddeder; kayıt `rejected` olarak kalır (ölçütler için). Flaşta yalnızca bekleyen tam metin atılır. */
 export async function rejectFromReview(db: Db, articleId: string, opts: { by: string; reason: string }): Promise<Article> {
   const a = await getArticle(db, articleId);
+  if (a.isFlash && a.status === "published") {
+    const [kept] = await db.update(articles).set({ pendingDraft: null, updatedAt: new Date(), editorNote: `tam metin reddedildi (${opts.by}): ${opts.reason}; flaş yayında` }).where(eq(articles.id, a.id)).returning();
+    await resolveQueue(db, a.id, opts.by);
+    return kept!;
+  }
   if (a.status !== "review" && a.status !== "draft") throw new Error(`reddedilemez: durum ${a.status}`);
   const [updated] = await db.update(articles).set({ status: "rejected", updatedAt: new Date(), editorNote: `reddedildi (${opts.by}): ${opts.reason}` }).where(eq(articles.id, articleId)).returning();
   await resolveQueue(db, articleId, opts.by);

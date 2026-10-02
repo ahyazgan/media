@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runEditRules, quoteAppearsIn } from "../src/edit/rules.js";
+import { runEditRules, quoteAppearsIn, checkFlash } from "../src/edit/rules.js";
 import { writeUserMessage } from "../src/prompts.js";
 import type { WriteOutput } from "../src/schemas.js";
 
@@ -114,5 +114,17 @@ describe("uzunluk tabanı ve borsa kodu satırı", () => {
     const base = { sourceName: "KAP", sourceUrl: "https://x", title: "T", publishedAt: "2026-10-02", summaryHint: "h", category: "borsa", documentText: "d" };
     expect(writeUserMessage({ ...base, stockCodes: ["NRBNK", "NYB"] })).toContain("\nBorsa kodu: NRBNK, NYB\n");
     expect(writeUserMessage(base)).not.toContain("Borsa kodu");
+  });
+});
+
+describe("checkFlash", () => {
+  const doc = "Kurul politika faizini yüzde 36,5'ten yüzde 35'e indirmiştir.";
+  it("belgeye dayalı kısa flaşı kabul eder", () => {
+    expect(checkFlash({ headline: "TCMB faizi yüzde 35'e indirdi", sentence: "Kurul faizi yüzde 36,5'ten yüzde 35'e indirdi.", numbersUsed: ["35", "36,5"] }, doc).ok).toBe(true);
+  });
+  it("uydurma sayı, yasaklı ifade ve uzun başlığı reddeder", () => {
+    expect(checkFlash({ headline: "TCMB faizi yüzde 34'e indirdi", sentence: "Kurul faizi indirdi.", numbersUsed: ["34"] }, doc).reasons.join(" ")).toMatch(/34/);
+    expect(checkFlash({ headline: "TCMB faizi indirdi", sentence: "Piyasaların olumlu karşılaması bekleniyor.", numbersUsed: [] }, doc).ok).toBe(false);
+    expect(checkFlash({ headline: "x".repeat(91), sentence: "Kurul faizi indirdi.", numbersUsed: [] }, doc).reasons.join(" ")).toMatch(/90/);
   });
 });

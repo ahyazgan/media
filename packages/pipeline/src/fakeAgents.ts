@@ -61,4 +61,10 @@ export const fakeAgents: Agents = {
       numbersUsed: extractNumbers(bodyMarkdown),
     };
   },
+  /** Flaş: başlık + belgenin ilk anlamlı cümlesi (belgeden kopya → sayı kontrolünden geçer) */
+  async flash({ title, textHead }) {
+    const sentence = textHead.split(/(?<=\.)\s+/).map((s) => s.replace(/\s+/g, " ").trim()).find((s) => s.length > 40 && s.length < 280) ?? textHead.slice(0, 200);
+    const headline = title.length > 90 ? title.slice(0, 87).replace(/\s+\S*$/, "") : title;
+    return { headline, sentence, numbersUsed: extractNumbers(`${headline}\n${sentence}`) };
+  },
 };

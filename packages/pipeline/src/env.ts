@@ -30,6 +30,12 @@ const Env = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
   PUSH_MIN_IMPORTANCE: z.coerce.number().int().min(1).max(6).default(4),
+  /**
+   * Flaş: bu kaynaklarda, bu önemden itibaren belgeden tek cümlelik haber saniyeler içinde yayımlanır (insan onayı beklemeden;
+   * sayı ve yasaklı kalıp kontrolünden geçmek şart). Tam metin aynı adresi günceller. Kapatmak: FLASH_SOURCES= (boş).
+   */
+  FLASH_SOURCES: z.string().default("tcmb,tuik,kap"),
+  FLASH_MIN_IMPORTANCE: z.coerce.number().int().min(1).max(6).default(4),
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().default("Kaynak <bulten@example.com>"),
   MAIL_DIR: z.string().default("./storage/mail"),

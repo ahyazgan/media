@@ -22,7 +22,7 @@ import { hasApiKey } from "@kaynak/agents";
 import { loadEnv } from "./env.js";
 import { createStore } from "./storage.js";
 import { ingestEvents, processPending, SOURCE_NAMES, type Agents } from "./pipeline.js";
-import { makeOnPublished } from "./publish.js";
+import { flashConfigFrom, makeOnPublished, makeOnUpdated } from "./publish.js";
 import { liveAgents } from "./liveAgents.js";
 import { fakeAgents } from "./fakeAgents.js";
 import { syncCalendar } from "./calendar.js";
@@ -150,6 +150,7 @@ const outcomes = await processPending({
   sourceNames: SOURCE_NAMES,
   log,
   onPublished: makeOnPublished(env, { db: handle.db, push: await createPushSender(env), log }),
+  onUpdated: makeOnUpdated(env), flash: flashConfigFrom(env),
 }, adapter);
 const summary = outcomes.reduce<Record<string, number>>((acc, o) => { acc[o.kind] = (acc[o.kind] ?? 0) + 1; return acc; }, {});
 console.log("[cli] sonuç:", summary);

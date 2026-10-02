@@ -50,6 +50,13 @@
       "when": 1790514683249,
       "tag": "0006_source_health",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790951182786,
+      "tag": "0007_flash",
+      "breakpoints": true
     }
   ]
 }

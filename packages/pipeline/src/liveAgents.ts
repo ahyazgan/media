@@ -1,5 +1,5 @@
-import { classify, write } from "@kaynak/agents";
+import { classify, flash, write } from "@kaynak/agents";
 import type { Agents } from "./pipeline.js";
 
 /** Üretim ajanları: @kaynak/agents üzerinden gerçek model çağrıları. */
-export const liveAgents: Agents = { classify, write };
+export const liveAgents: Agents = { classify, write, flash };

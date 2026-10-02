@@ -36,6 +36,9 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 - [ ] **Altın örnekler:** `packages/agents/fixtures/{kap,tcmb,tuik}` sentetiktir; gerçek belgelerle değiştirip `LIVE=1 pnpm test:agents` koşun.
       Prompt değişikliği bu test geçmeden merge edilmez.
 - [ ] **İnsan onayı eşiği:** `REVIEW_THRESHOLD=4` ile başlayın; ilk haftalarda inceleme kuyruğunu günlük boşaltın, güven kazandıkça 5'e çekin.
+- [ ] **Flaş politikası:** `FLASH_SOURCES=tcmb,tuik,kap`, `FLASH_MIN_IMPORTANCE=4` — bu haberlerde belgeden tek cümle **onay beklemeden** yayımlanır
+      (sayı + yasaklı kalıp kontrolü şart) ve Telegram/X/bildirim flaşla gider; tam metin onay bekler. Yayın kurulu bu politikayı onaylamalı;
+      istenmiyorsa `FLASH_SOURCES=` (boş). Yayın anlarında (TÜFE 10:00, PPK 14:00) editör inceleme kuyruğunda olmalı.
 
 ## 3. Reklam (Faz 5)
 
