@@ -46,7 +46,8 @@ const Env = z.object({
   X_MAX_PER_DAY: z.coerce.number().int().min(0).max(30).default(30),
   X_MIN_IMPORTANCE: z.coerce.number().int().min(1).max(6).default(3),
   TCMB_FEED_URL: z.string().optional(),
-  TUIK_FEED_URL: z.string().optional(),
+  /** TÜİK veri portalı (JSON API); varsayılan https://veriportali.tuik.gov.tr */
+  TUIK_BASE_URL: z.string().optional(),
   TCMB_CALENDAR_URL: z.string().optional(),
   TUIK_CALENDAR_URL: z.string().optional(),
   STORAGE_DIR: z.string().default("./storage"),

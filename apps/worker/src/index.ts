@@ -22,7 +22,7 @@ await seed(handle.db);
 const log = (m: string, meta?: Record<string, unknown>) => console.log(new Date().toISOString(), `[${m}]`, JSON.stringify(meta ?? {}));
 
 const registry: SourceAdapter[] = [
-  new ResmiGazeteAdapter({ baseUrl: env.RG_BASE_URL }), new KapAdapter({ baseUrl: env.KAP_BASE_URL }), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ feedUrl: env.TUIK_FEED_URL }),
+  new ResmiGazeteAdapter({ baseUrl: env.RG_BASE_URL }), new KapAdapter({ baseUrl: env.KAP_BASE_URL }), new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }), new TuikAdapter({ baseUrl: env.TUIK_BASE_URL }),
   new SpkAdapter(), new BddkAdapter(), new EpdkAdapter(), new BotasAdapter(),
 ];
 const enabledIds = new Set((await handle.db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((r) => r.id));

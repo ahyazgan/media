@@ -22,11 +22,15 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 ## 2. Kaynak erişimi (geliştirme ortamından doğrulanamayanlar)
 
 - [ ] **Resmi Gazete TLS:** TÜBİTAK Kamu SM kök sertifikasını indirip `NODE_EXTRA_CA_CERTS` ile verin; `pnpm pipeline:run -- --date <bugün>` çalışsın.
-- [ ] **KAP:** kullanım koşullarını okuyun (ham veri yeniden dağıtımı yok; gerekiyorsa MKK ile lisans). `pnpm --filter @kaynak/sources capture:kap`
-      çıktısındaki alan adlarını `packages/sources/src/kap/parse.ts` ile karşılaştırın; sonra `pnpm db:seed -- --enable kap`.
-- [ ] **TCMB / TÜİK:** besleme ve takvim adreslerini canlıda doğrulayın (`--source tcmb`, `--source tuik`, `--calendar`); değiştiyse
-      `TCMB_FEED_URL`, `TUIK_FEED_URL`, `TCMB_CALENDAR_URL`, `TUIK_CALENDAR_URL`. `pnpm db:seed -- --enable tcmb` / `tuik`.
-- [ ] **SPK / BDDK / EPDK / BOTAŞ:** liste adresleri canlıda doğrulanmalı (`--source spk` vb.); sonra `--enable`. Bu kaynaklar için altın örnek
+- [ ] **KAP:** kullanım koşullarını okuyun (ham veri yeniden dağıtımı yok; gerekiyorsa MKK ile lisans); sonra `pnpm db:seed -- --enable kap`.
+      Erişim 2026-10-02'de canlıda doğrulandı: liste `POST /tr/api/disclosure/list/main`, belge `/tr/api/BildirimPdf/<no>` (eski
+      `GET /tr/api/disclosures` yanıt vermiyor). Filtre sonrası iş gününde ~160 olay. `pnpm --filter @kaynak/sources probe kap` ile yoklanır.
+- [x] **TCMB / TÜİK:** canlıda doğrulandı (2026-10-02, `pnpm --filter @kaynak/sources probe tcmb tuik calendar`). TCMB: Atom beslemesi
+      `.../Bottom+Menu/Diger/RSS/Basin+Duyurulari`, takvim `.../Main+Menu/Duyurular/Takvim`. TÜİK: veriportali.tuik.gov.tr JSON API
+      (`X-Requested-With` başlığı şart), takvim `www.tuik.gov.tr/Kurumsal/GetYillikHaberBulteniListesi?yil=`. Adresler değişirse
+      `TCMB_FEED_URL`, `TUIK_BASE_URL`, `TCMB_CALENDAR_URL`, `TUIK_CALENDAR_URL`. Üretimde açmak: `pnpm db:seed -- --enable tcmb` / `tuik`.
+- [ ] **SPK / BDDK / EPDK / BOTAŞ:** 2026-10-02 yoklamasında dördü de çalışmadı (SPK/EPDK: liste yapısı değişmiş, BDDK: bağlantı
+      kurulamadı, BOTAŞ: engelleme sayfası). Adresler/seçiciler güncellenmeli (`--source spk` vb.); sonra `--enable`. Bu kaynaklar için altın örnek
       yok; gerçek belgelerle en az 5'er örnek ekleyip `SOURCES` listesine alın (`packages/agents/test/golden.test.ts`).
 - [ ] **Altın örnekler:** `packages/agents/fixtures/{kap,tcmb,tuik}` sentetiktir; gerçek belgelerle değiştirip `LIVE=1 pnpm test:agents` koşun.
       Prompt değişikliği bu test geçmeden merge edilmez.

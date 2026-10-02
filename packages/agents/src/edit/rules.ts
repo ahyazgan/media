@@ -28,6 +28,11 @@ export interface EditOptions {
   minWords?: number;
   maxWords?: number;
   maxTitleChars?: number;
+  /**
+   * Yalnızca sayı kontrolüne eklenen güvenilir üst veri (kaynağın resmi listesindeki yayın zamanı gibi). Yazar "Yayın tarihi"ni
+   * habere geçirebilir; KAP PDF'indeki saat listedekinden bir saniye sapabildiği için belge metninde bulunmayabilir.
+   */
+  groundingExtra?: string;
 }
 
 export function wordCount(s: string): number {
@@ -50,7 +55,8 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
   const maxTitle = opts.maxTitleChars ?? 70;
 
   const articleText = [article.title, article.dek, article.bodyMarkdown, ...article.keyFacts.map((k) => k.text)].join("\n");
-  const grounding = numericGroundingCheck(article.numbersUsed, articleText, documentText);
+  const grounding = numericGroundingCheck(article.numbersUsed, articleText, opts.groundingExtra ? `${documentText}
+${opts.groundingExtra}` : documentText);
   const allHits = findBanned({ title: article.title, dek: article.dek, body: article.bodyMarkdown, keyFacts: article.keyFacts.map((k) => k.text).join("\n") });
   const docLower = documentText.toLocaleLowerCase("tr");
   const isAttributed = (b: BannedHit) => b.id in SOURCE_ATTRIBUTABLE && docLower.includes(SOURCE_ATTRIBUTABLE[b.id]!);

@@ -8,7 +8,7 @@ import { politeFetch } from "../src/http.js";
 import { KapAdapter } from "../src/kap/adapter.js";
 
 const adapter = new KapAdapter();
-const res = await politeFetch(adapter.listUrl(), { headers: { accept: "application/json" } });
+const res = await politeFetch(adapter.listUrl(), { method: "POST", body: adapter.listBody(new Date(Date.now() - 86_400_000)), headers: { accept: "application/json", "content-type": "application/json" } });
 const text = await res.text();
 const date = new Date().toISOString().slice(0, 10);
 const out = new URL(`../fixtures/kap-disclosures-${date}.json`, import.meta.url);

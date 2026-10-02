@@ -11,7 +11,8 @@
     "lint": "eslint src scripts",
     "build": "echo skip",
     "capture": "tsx scripts/capture-day.ts",
-    "capture:kap": "tsx scripts/capture-kap.ts"
+    "capture:kap": "tsx scripts/capture-kap.ts",
+    "probe": "tsx scripts/probe-live.ts"
   },
   "dependencies": {
     "cheerio": "^1.1.2",

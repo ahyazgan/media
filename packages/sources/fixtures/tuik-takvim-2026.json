@@ -1,0 +1,314 @@
+{
+ "yayindaOlanlarList": [
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "http://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/TCMB+Analitik+Bilanco",
+   "dilId": 1,
+   "gTarih": "2026-10-02T14:30:00",
+   "donemi": "01-10-2026",
+   "birimi": null,
+   "adi": "TCMB Analitik Bilanço",
+   "id": 61836
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3503/bie_osgmpos",
+   "dilId": 1,
+   "gTarih": "2026-10-02T10:30:00",
+   "donemi": "01-10-2026",
+   "birimi": null,
+   "adi": "Perakende Ödeme Sistemi (PÖS) İşlemleri",
+   "id": 61086
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3503/bie_eftemkt2",
+   "dilId": 1,
+   "gTarih": "2026-10-02T10:30:00",
+   "donemi": "01-10-2026",
+   "birimi": null,
+   "adi": "Elektronik Fon Transfer (EFT) Sistemi ve Elektronik Menkul Kıymet Transfer (EMKT) Sistemi İşlemleri ",
+   "id": 60835
+  },
+  {
+   "sorumluKisaAd": "TÜİK",
+   "sorumluKurum": "Türkiye İstatistik Kurumu",
+   "link": "https://data.tuik.gov.tr/Bulten/Index?p=Yapay-Zeka-İstatistikleri-2026-62066&dil=1",
+   "dilId": 1,
+   "gTarih": "2026-10-02T10:00:00",
+   "donemi": "2026",
+   "birimi": "BİLİM VE TEKNOLOJİ İSTATİSTİKLERİ GRUP BAŞKANLIĞI",
+   "adi": "Yapay Zeka İstatistikleri",
+   "id": 62066
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/istatistikler/istatistiksel-veriler/gunluk-istatistikler",
+   "dilId": 1,
+   "gTarih": "2026-10-01T19:00:00",
+   "donemi": "30-09-2026",
+   "birimi": null,
+   "adi": "Menkul Kıymet Yatırım Fonlarına/Emeklilik Yatırım Fonlarına/Yatırım Ortaklıklarına İlişkin Günlük İstatistikler",
+   "id": 60040
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3002/bie_pyintbnk",
+   "dilId": 1,
+   "gTarih": "2026-10-01T18:00:00",
+   "donemi": "01-10-2026",
+   "birimi": null,
+   "adi": "Merkez Bankası Bünyesindeki Bankalararası Para Piyasası İstatistikleri",
+   "id": 61336
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Faiz+Istatistikleri/Haftalik/Kredi+Faiz+Oranlari/",
+   "dilId": 1,
+   "gTarih": "2026-10-01T17:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "Kredi Faiz Oranları (Haftalık Akım, Ağırlıklı Ortalama) ",
+   "id": 60634
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Faiz+Istatistikleri/Haftalik/Mevduat+Faiz+Oranlari/",
+   "dilId": 1,
+   "gTarih": "2026-10-01T17:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "Mevduat Faiz Oranları(Haftalık Akım, Ağırlıklı Ortalama)",
+   "id": 60528
+  }
+ ],
+ "yayindaOlmayanlarList": [
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Doviz+Kurlari/Gosterge+Niteligindeki+Merkez+Bankasi+Kurlarii/ ",
+   "dilId": 1,
+   "gTarih": "2026-10-02T15:30:00",
+   "donemi": "02-10-2026",
+   "birimi": null,
+   "adi": "Gösterge Niteliğindeki Merkez Bankası Kurları",
+   "id": 61586
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3002/bie_pyintbnk",
+   "dilId": 1,
+   "gTarih": "2026-10-02T18:00:00",
+   "donemi": "02-10-2026",
+   "birimi": null,
+   "adi": "Merkez Bankası Bünyesindeki Bankalararası Para Piyasası İstatistikleri",
+   "id": 61337
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/istatistikler/istatistiksel-veriler/gunluk-istatistikler",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "01-10-2026",
+   "birimi": null,
+   "adi": "Menkul Kıymet Yatırım Fonlarına/Emeklilik Yatırım Fonlarına/Yatırım Ortaklıklarına İlişkin Günlük İstatistikler",
+   "id": 60041
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/ihrac-verileri/",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "Eylül 2026",
+   "birimi": null,
+   "adi": "Halka Açık Şirket İstatistikleri (Birinci el piyasa ve menkul kıymet ihraçları; menkul kıymet stokları, ikinci el piyasalar)",
+   "id": 59613
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/spk-bultenleri/2026-yili-spk-bultenleri",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "Emeklilik ve Menkul Kıymet Yatırım Fonlarının Katılma Paylarına İlişkin İzahname Onayı; Gayrimenkul ve Girişim Sermayesi Yatırım Fonlarının Katılma Paylarına İlişkin İhraç Belgesi Onayı; Tüm Yatırım Ortaklıkları Pay/Borçlanma Aracına İlişkin İzahname/İhraç Belgesi Onayı",
+   "id": 59678
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/ihrac-verileri/",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "Eylül 2026",
+   "birimi": null,
+   "adi": "İzahname/ihraç Belgesi Onayı Verilen Borçlanma Araçları, Kira Sertifikaları ve Varantlar",
+   "id": 59636
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/spk-bultenleri/2026-yili-spk-bultenleri",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "İzahname/ihraç Belgesi Onayı Verilen Borçlanma Araçları, Kira Sertifikaları ve Varantlar",
+   "id": 59840
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://spk.gov.tr/spk-bultenleri/2026-yili-spk-bultenleri",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "Halka Açık Şirket İstatistikleri (İzahname/ihraç belgesi onayı verilen ihraç taleplerine yönelik adet ve tutara ilişkin haftalık istatistikler)",
+   "id": 59786
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://tspb.org.tr/kamuyu_aydinlatma/kategori-araci_kurum/",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "39. Hafta 2026",
+   "birimi": null,
+   "adi": "Faaliyetleri Devam Etmekte Olan Aracı Kuruluşlar / Faaliyetleri Geçici Olarak Durdurulan Aracı Kuruluşlar / Aracı Kuruluşların Mevcut Yetki Belgelerine İlişkin Bilgiler / Aracı Kuruluşların Merkez Dışı Örgütleri",
+   "id": 59732
+  },
+  {
+   "sorumluKisaAd": "SPK",
+   "sorumluKurum": "Sermaye Piyasası Kurulu",
+   "link": "https://tspb.org.tr/kamuyu_aydinlatma/kategori-araci_kurum/",
+   "dilId": 1,
+   "gTarih": "2026-10-02T19:00:00",
+   "donemi": "Eylül 2026",
+   "birimi": null,
+   "adi": "Faaliyetleri Devam Etmekte Olan Aracı Kuruluşlar / Faaliyetleri Geçici Olarak Durdurulan Aracı Kuruluşlar / Aracı Kuruluşların Mevcut Yetki Belgelerine İlişkin Bilgiler / Aracı Kuruluşların Merkez Dışı Örgütleri",
+   "id": 59602
+  },
+  {
+   "sorumluKisaAd": "TÜİK",
+   "sorumluKurum": "Türkiye İstatistik Kurumu",
+   "link": null,
+   "dilId": 1,
+   "gTarih": "2026-10-05T10:00:00",
+   "donemi": "Eylül 2026",
+   "birimi": "TÜKETİCİ FİYATLARI GRUP BAŞKANLIĞI",
+   "adi": "Tüketici Fiyat Endeksi (TÜFE)",
+   "id": 0
+  },
+  {
+   "sorumluKisaAd": "TÜİK",
+   "sorumluKurum": "Türkiye İstatistik Kurumu",
+   "link": null,
+   "dilId": 1,
+   "gTarih": "2026-10-05T10:00:00",
+   "donemi": "Eylül 2026",
+   "birimi": "ÜRETİCİ FİYATLARI GRUP BAŞKANLIĞI",
+   "adi": "Yurt İçi Üretici Fiyat Endeksi",
+   "id": 0
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3503/bie_osgmpos",
+   "dilId": 1,
+   "gTarih": "2026-10-05T10:30:00",
+   "donemi": "02-10-2026",
+   "birimi": null,
+   "adi": "Perakende Ödeme Sistemi (PÖS) İşlemleri",
+   "id": 61087
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://evds3.tcmb.gov.tr/tumSeriler/3503/bie_eftemkt2",
+   "dilId": 1,
+   "gTarih": "2026-10-05T10:30:00",
+   "donemi": "02-10-2026",
+   "birimi": null,
+   "adi": "Elektronik Fon Transfer (EFT) Sistemi ve Elektronik Menkul Kıymet Transfer (EMKT) Sistemi İşlemleri ",
+   "id": 60836
+  },
+  {
+   "sorumluKisaAd": "İB",
+   "sorumluKurum": "İçişleri Bakanlığı",
+   "link": "http://www.trafik.gov.tr/istatistikler37",
+   "dilId": 1,
+   "gTarih": "2026-10-05T10:30:00",
+   "donemi": "Eylül 2026",
+   "birimi": null,
+   "adi": "Trafik İstatistik Bülteni",
+   "id": 59379
+  },
+  {
+   "sorumluKisaAd": "İB",
+   "sorumluKurum": "İçişleri Bakanlığı",
+   "link": "https://www.goc.gov.tr/istatistikler",
+   "dilId": 1,
+   "gTarih": "2026-10-05T14:00:00",
+   "donemi": "40. Hafta 2026",
+   "birimi": null,
+   "adi": "İkamet İzinleri İstatistikleri",
+   "id": 59421
+  },
+  {
+   "sorumluKisaAd": "İB",
+   "sorumluKurum": "İçişleri Bakanlığı",
+   "link": "https://www.goc.gov.tr/istatistikler",
+   "dilId": 1,
+   "gTarih": "2026-10-05T14:00:00",
+   "donemi": "40. Hafta 2026",
+   "birimi": null,
+   "adi": "Düzensiz Göç İstatistikleri",
+   "id": 59473
+  },
+  {
+   "sorumluKisaAd": "İB",
+   "sorumluKurum": "İçişleri Bakanlığı",
+   "link": "https://www.goc.gov.tr/istatistikler",
+   "dilId": 1,
+   "gTarih": "2026-10-05T14:00:00",
+   "donemi": "40. Hafta 2026",
+   "birimi": null,
+   "adi": "Geçici Koruma İstatistikleri",
+   "id": 59525
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "http://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/TCMB+Analitik+Bilanco",
+   "dilId": 1,
+   "gTarih": "2026-10-05T14:30:00",
+   "donemi": "02-10-2026",
+   "birimi": null,
+   "adi": "TCMB Analitik Bilanço",
+   "id": 61837
+  },
+  {
+   "sorumluKisaAd": "TCMB",
+   "sorumluKurum": "Türkiye Cumhuriyet Merkez Bankası",
+   "link": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Doviz+Kurlari/Gosterge+Niteligindeki+Merkez+Bankasi+Kurlarii/ ",
+   "dilId": 1,
+   "gTarih": "2026-10-05T15:30:00",
+   "donemi": "05-10-2026",
+   "birimi": null,
+   "adi": "Gösterge Niteliğindeki Merkez Bankası Kurları",
+   "id": 61587
+  }
+ ]
+}

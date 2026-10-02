@@ -104,11 +104,13 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     documentText: text, publishedAt: row.publishedAt.toISOString(), classify: cls,
   };
   let draft = await deps.agents.write(writeInput);
-  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold });
+  // Yazara verilen yayın zamanı (resmi listeden) sayı kontrolünde belgeye eşdeğer sayılır
+  const groundingExtra = istanbulStamp(row.publishedAt);
+  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra });
   if (edit.decision === "retry") {
     log("edit:retry", { externalId: row.externalId, reasons: edit.reasons });
     draft = await deps.agents.write({ ...writeInput, avoidPhrases: edit.banned.map((b) => b.match) });
-    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true });
+    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra });
   }
 
   // articles kaydı
@@ -196,4 +198,11 @@ export function keywordOverlap(title: string, text: string): number {
   let n = 0;
   for (const w of words) if (body.has(w)) n++;
   return n;
+}
+
+/** Yayın zamanı Türkiye saatiyle, haberde geçebilecek biçimlerde: "02.10.2026 15:57:25 2 Ekim 2026 15:57" */
+function istanbulStamp(d: Date): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(d).map((x) => [x.type, x.value]));
+  const month = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", month: "long" }).format(d);
+  return `${p["day"]}.${p["month"]}.${p["year"]} ${p["hour"]}:${p["minute"]}:${p["second"]} ${Number(p["day"])} ${month} ${p["year"]} ${p["hour"]}:${p["minute"]}`;
 }

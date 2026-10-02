@@ -46,10 +46,22 @@ export class KapAdapter implements SourceAdapter {
     };
   }
 
-  listUrl(): string { return `${this.baseUrl}/tr/api/disclosures`; }
+  listUrl(): string { return `${this.baseUrl}/tr/api/disclosure/list/main`; }
+
+  /**
+   * Liste gövdesi: `since` gününden bugüne (Türkiye takvimi), en fazla 7 gün geriye. IGS = borsa şirketleri, DDK = diğer
+   * kurumlar (borçlanma aracı ihraççıları; çoğunun borsa kodu yoktur → requireStockCode ile elenir).
+   */
+  listBody(since: Date, now = new Date()): string {
+    const from = new Date(Math.max(since.getTime(), now.getTime() - 7 * 86_400_000));
+    return JSON.stringify({ fromDate: istanbulDate(from), toDate: istanbulDate(now), memberTypes: ["IGS", "DDK"] });
+  }
 
   async fetchNew(since: Date): Promise<RawEvent[]> {
-    const res = await politeFetch(this.listUrl(), { ...this.http, headers: { accept: "application/json", ...this.http.headers } });
+    const res = await politeFetch(this.listUrl(), {
+      ...this.http, method: "POST", body: this.listBody(since),
+      headers: { accept: "application/json", "content-type": "application/json", "accept-language": "tr", ...this.http.headers },
+    });
     const body = await res.text();
     let json: unknown;
     try { json = JSON.parse(body); } catch { throw new StructureError(this.id, "bildirim listesi JSON değil (engelleme ya da uç nokta değişikliği)", body.slice(0, 400)); }
@@ -81,17 +93,20 @@ export class KapAdapter implements SourceAdapter {
     return { sourceId: this.id, externalId: String(d.index), title, url: disclosureUrl(d.index, this.baseUrl), publishedAt: d.publishedAt, payloadHash, payload };
   }
 
-  /** Bildirim sayfasını (HTML) indirir; olmazsa PDF dışa aktarımını dener. */
+  /**
+   * Bildirimin PDF dökümünü indirir (bildirim metninin tamamı); olmazsa bildirim sayfasını dener. Yeni KAP sayfası
+   * metni istemci tarafında yüklediğinden HTML'de yalnızca başlık bulunur — bu yüzden PDF önce gelir.
+   */
   async fetchDocument(ev: RawEvent): Promise<FetchedDocument> {
     const index = Number(ev.externalId);
-    const candidates = [ev.url, disclosurePdfUrl(index, this.baseUrl)];
+    const candidates = [disclosurePdfUrl(index, this.baseUrl), ev.url];
     let lastErr: unknown;
     for (const url of candidates) {
       try {
         const res = await politeFetch(url, this.http);
         const bytes = Buffer.from(await res.arrayBuffer());
         const ct = res.headers.get("content-type") ?? "";
-        const mime = ct.includes("pdf") || /BildirimPdf/.test(url) ? "application/pdf" : "text/html";
+        const mime = ct.includes("pdf") || bytes.subarray(0, 5).toString() === "%PDF-" ? "application/pdf" : "text/html";
         return { url, mime, bytes };
       } catch (e) { lastErr = e; if (!(e instanceof HttpError && (e.status === 404 || e.status === 410))) throw e; }
     }
@@ -100,3 +115,9 @@ export class KapAdapter implements SourceAdapter {
 }
 
 export const kap = new KapAdapter();
+
+/** Türkiye takvimine göre "dd.MM.yyyy" */
+function istanbulDate(d: Date): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p["day"]}.${p["month"]}.${p["year"]}`;
+}

@@ -74,6 +74,32 @@ export function parseTuikCalendar(html: string, opts: { sourceUrl?: string; defa
   return out.sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
 }
 
+interface TuikCalendarRow { sorumluKisaAd?: string; adi?: string; donemi?: string | null; gTarih?: string; link?: string | null }
+
+/**
+ * TÜİK Ulusal Veri Yayımlama Takvimi, JSON biçimi (canlıda doğrulandı 2026-10-02):
+ * `GET https://www.tuik.gov.tr/Kurumsal/GetYillikHaberBulteniListesi?yil=2026` →
+ * `{ yayindaOlanlarList: [...], yayindaOlmayanlarList: [...] }`, satırlar `{ sorumluKisaAd: "TÜİK", adi, donemi, gTarih: "2026-10-05T10:00:00" }`.
+ * Takvim tüm kurumları içerir (TCMB kurları, SPK, BDDK…); yalnızca TÜİK bültenleri alınır — TCMB'nin PPK günleri kendi sayfasından gelir.
+ */
+export function parseTuikCalendarJson(json: unknown, opts: { sourceUrl?: string } = {}): CalendarEntry[] {
+  const o = (json && typeof json === "object" ? json : {}) as Record<string, unknown>;
+  const rows = [o["yayindaOlanlarList"], o["yayindaOlmayanlarList"]].flatMap((v) => (Array.isArray(v) ? (v as TuikCalendarRow[]) : []));
+  const out: CalendarEntry[] = [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (r.sorumluKisaAd?.trim().toLocaleUpperCase("tr") !== "TÜİK" || !r.adi || !r.gTarih) continue;
+    const scheduledAt = new Date(`${r.gTarih.slice(0, 19)}+03:00`);
+    if (Number.isNaN(scheduledAt.getTime())) continue;
+    const title = r.donemi ? `${r.adi.trim()}, ${r.donemi.trim()}` : r.adi.trim();
+    const key = `${scheduledAt.toISOString()}|${title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ institution: "tuik", title, scheduledAt, sourceUrl: opts.sourceUrl });
+  }
+  return out.sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+}
+
 /**
  * TCMB PPK toplantı takvimi: sayfadaki tüm tarihler (tablo ya da liste) toplantı günüdür; karar 14:00'te açıklanır.
  * Aynı sayfada başka takvimler (Enflasyon Raporu vb.) varsa `title` içeren satır etiketi kullanılır.

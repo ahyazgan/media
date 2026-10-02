@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { findAllDates, findDate, parseTcmbCalendar, parseTuikCalendar } from "./parse.js";
+import { findAllDates, findDate, parseTcmbCalendar, parseTuikCalendar, parseTuikCalendarJson } from "./parse.js";
 import { importCalendars } from "./import.js";
 import { _resetHttpState } from "../http.js";
 
@@ -58,5 +58,41 @@ describe("importCalendars", () => {
     const r = await importCalendars({ tuikUrl: "https://tuik.test/takvim", tcmbUrl: "https://tcmb.test/ppk", http: { fetchImpl, maxRetries: 0 } });
     expect(r.entries).toHaveLength(5);
     expect(r.errors).toEqual([{ institution: "tcmb", error: expect.stringContaining("404") }]);
+  });
+});
+
+// Canlıdan alınmış örnekler (2026-10-02)
+const tuikJson = JSON.parse(readFileSync(new URL("../../fixtures/tuik-takvim-2026.json", import.meta.url), "utf8"));
+const tcmbLive = readFileSync(new URL("../../fixtures/tcmb-takvim.html", import.meta.url), "utf8");
+
+describe("canlı takvim biçimleri", () => {
+  it("TÜİK JSON: yalnızca TÜİK satırları, başlık + dönem, Türkiye saati", () => {
+    const e = parseTuikCalendarJson(tuikJson, { sourceUrl: "https://www.tuik.gov.tr/Kurumsal/Veri_Takvimi" });
+    expect(e.map((x) => x.title)).toEqual(["Yapay Zeka İstatistikleri, 2026", "Tüketici Fiyat Endeksi (TÜFE), Eylül 2026", "Yurt İçi Üretici Fiyat Endeksi, Eylül 2026"]);
+    expect(e[1]!.scheduledAt.toISOString()).toBe("2026-10-05T07:00:00.000Z");
+    expect(e.every((x) => x.institution === "tuik")).toBe(true);
+  });
+  it("TCMB Takvim sayfası: dört sütun (karar, özet, enflasyon raporu, finansal istikrar raporu)", () => {
+    const e = parseTcmbCalendar(tcmbLive, { year: 2026 });
+    expect(e).toHaveLength(22);
+    expect(e.filter((x) => x.title === "PPK Toplantısı ve Faiz Kararı").map((x) => x.scheduledAt.toISOString().slice(0, 10)))
+      .toEqual(["2026-01-22", "2026-03-12", "2026-04-22", "2026-06-11", "2026-07-23", "2026-09-10", "2026-10-22", "2026-12-10"]);
+    expect(e.find((x) => x.title === "Finansal İstikrar Raporu" && x.scheduledAt.getUTCMonth() === 10)?.scheduledAt.toISOString()).toBe("2026-11-27T07:30:00.000Z");
+  });
+  it("importCalendars TÜİK JSON ucunu {yil} ile çağırır", async () => {
+    _resetHttpState();
+    const seen: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
+      seen.push(url);
+      if (url.includes("tuik")) return Response.json(tuikJson);
+      return new Response(tcmbLive, { status: 200 });
+    };
+    const r = await importCalendars({ tuikUrl: "https://tuik.test/GetYillikHaberBulteniListesi?yil={yil}", tcmbUrl: "https://tcmb.test/takvim", year: 2026, http: { fetchImpl, maxRetries: 0 } });
+    expect(seen[0]).toBe("https://tuik.test/GetYillikHaberBulteniListesi?yil=2026");
+    expect(r.errors).toEqual([]);
+    expect(r.entries.filter((x) => x.institution === "tuik")).toHaveLength(3);
+    expect(r.entries.filter((x) => x.institution === "tcmb")).toHaveLength(22);
   });
 });

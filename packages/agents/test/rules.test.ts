@@ -28,6 +28,13 @@ describe("runEditRules", () => {
     expect(r.decision).toBe("reject");
     expect(r.reasons[0]).toMatch(/numericGroundingCheck/);
   });
+  it("resmi listedeki yayın zamanı (groundingExtra) sayı kontrolünde kabul edilir, yalnızca o", () => {
+    const withTime = { ...good, dek: "Bildirim 02.10.2026 15:57:25'te yayımlandı; değişiklik 1 Ekim 2025'te yürürlüğe giriyor." };
+    expect(runEditRules(withTime, DOC, { importance: 2, reviewThreshold: 4 }).decision).toBe("reject");
+    expect(runEditRules(withTime, DOC, { importance: 2, reviewThreshold: 4, groundingExtra: "02.10.2026 15:57:25 2 Ekim 2026 15:57" }).decision).toBe("publish");
+    const invented = { ...withTime, dek: withTime.dek + " Tutar 4,2 milyon TL." };
+    expect(runEditRules(invented, DOC, { importance: 2, reviewThreshold: 4, groundingExtra: "02.10.2026 15:57:25" }).decision).toBe("reject");
+  });
   it("yasaklı kalıpta ilk denemede retry, ikincide review", () => {
     const bad = { ...good, bodyMarkdown: good.bodyMarkdown + " Uzmanlara göre etkisi büyük olabilir." };
     expect(runEditRules(bad, DOC, { importance: 2, reviewThreshold: 4 }).decision).toBe("retry");

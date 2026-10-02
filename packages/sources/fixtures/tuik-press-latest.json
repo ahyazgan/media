@@ -1,0 +1,86 @@
+{
+ "data": [
+  {
+   "name": "Yapay Zeka İstatistikleri",
+   "period": "2026",
+   "url": "/tr/press/62066",
+   "date": "2026-10-02T10:00:00",
+   "type": "Haber Bülteni",
+   "typeId": 1
+  },
+  {
+   "name": "Devlet Hesapları",
+   "period": "2025",
+   "url": "/tr/press/58117",
+   "date": "2026-10-01T10:00:00",
+   "type": "Haber Bülteni",
+   "typeId": 1
+  },
+  {
+   "name": "Dış Ticaret İstatistikleri",
+   "period": "Ağustos 2026",
+   "url": "/tr/press/58239",
+   "date": "2026-09-30T10:00:00",
+   "type": "Haber Bülteni",
+   "typeId": 1
+  },
+  {
+   "name": "Hizmet Üretici Fiyat Endeksi",
+   "period": "Ağustos 2026",
+   "url": "/tr/press/58098",
+   "date": "2026-09-30T10:00:00",
+   "type": "Haber Bülteni",
+   "typeId": 1
+  },
+  {
+   "name": "İşgücü İstatistikleri",
+   "period": "Ağustos 2026",
+   "url": "/tr/press/57987",
+   "date": "2026-09-30T10:00:00",
+   "type": "Haber Bülteni",
+   "typeId": 1
+  },
+  {
+   "name": "İşgücüne İlişkin Tamamlayıcı Göstergeleri-Revizyon Geçmişi",
+   "period": "2026-08",
+   "url": "https://databrowser2.tuik.gov.tr/#/tr/tuik/categories/8/8_2/8_2_1/TR,DF_ISGUCU_AYLIK_TAMAMLAYICI_GOSTERGE_O,1.0",
+   "date": "2026-09-30T10:00:00",
+   "type": "Tablolar ve Grafikler",
+   "typeId": 2
+  },
+  {
+   "name": "Temel İşgücü Göstergeleri-Revizyon Geçmişi",
+   "period": "2026-08",
+   "url": "https://databrowser2.tuik.gov.tr/#/tr/tuik/categories/8/8_2/8_2_1/TR,DF_ISGUCU_AYLIK_TEMEL_ISGUCU_O,1.0",
+   "date": "2026-09-30T10:00:00",
+   "type": "Tablolar ve Grafikler",
+   "typeId": 2
+  },
+  {
+   "name": "İstihdam Edilenlerin Fiili Çalışma Süreleri-Revizyon Geçmişi",
+   "period": "2026-08",
+   "url": "https://databrowser2.tuik.gov.tr/#/tr/tuik/categories/8/8_2/8_2_1/TR,DF_ISGUCU_AYLIK_FIIL_CALISMA_SURE_O,1.0",
+   "date": "2026-09-30T10:00:00",
+   "type": "Tablolar ve Grafikler",
+   "typeId": 2
+  },
+  {
+   "name": "Türkiye'deki Çocuklar, 2025 İstatistiklere Bakış",
+   "period": "2025",
+   "url": "/api/tr/data/downloads?t=y&p=8%2BjW1C90aceJhHxC8hoPz48f%2FDvlJBkGjscPaEJiwoej6yOQeIryjTFhcRIP%2BbwUcEWdZT5%2BCf2VVpQzFAsXIa91UgsSm%2FFkLGhu5IYaRIRSrt2L%2F6T1ih451IFXy2ks",
+   "date": "2026-09-30T00:00:00",
+   "type": "Yayın",
+   "typeId": 6
+  },
+  {
+   "name": "Tüketici fiyat endeksi ve değişim oranları",
+   "period": "2026-08",
+   "url": "https://databrowser2.tuik.gov.tr/#/tr/tuik/categories/6/6_5/TR,DF_TUFE_SDMX_2003,1.0",
+   "date": "2026-09-29T17:00:00",
+   "type": "Tablolar ve Grafikler",
+   "typeId": 2
+  }
+ ],
+ "isError": false,
+ "message": "ok"
+}

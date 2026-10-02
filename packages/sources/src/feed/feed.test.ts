@@ -2,12 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { externalIdFor, parseFeed, parseFeedDate } from "./parse.js";
 import { TcmbAdapter, tcmbSection } from "../tcmb.js";
-import { TuikAdapter, tuikSection } from "../tuik.js";
+import { TuikAdapter } from "../tuik.js";
 import { intervalFor } from "../types.js";
 import { _resetHttpState } from "../http.js";
 
 const tcmbXml = readFileSync(new URL("../../fixtures/tcmb-basin.xml", import.meta.url), "utf8");
+// Genel Atom örneği (TÜİK'in eski RSS biçimi; TÜİK artık JSON API kullanır → tuik.test.ts)
 const tuikXml = readFileSync(new URL("../../fixtures/tuik-bulten.xml", import.meta.url), "utf8");
+// Canlıdan alınmış TCMB Atom beslemesi (2026-10-02)
+const tcmbAtom = readFileSync(new URL("../../fixtures/tcmb-basin-atom.xml", import.meta.url), "utf8");
 
 describe("parseFeed", () => {
   it("RSS 2.0: başlık, bağlantı, tarih, özet (HTML temizlenmiş)", () => {
@@ -28,6 +31,9 @@ describe("parseFeed", () => {
   it("tarih biçimleri", () => {
     expect(parseFeedDate("05.10.2026 10:00")?.toISOString()).toBe("2026-10-05T07:00:00.000Z");
     expect(parseFeedDate("2026-10-05T10:00:00+03:00")?.toISOString()).toBe("2026-10-05T07:00:00.000Z");
+    expect(parseFeedDate("17 Eyl 2026 14:00:00")?.toISOString()).toBe("2026-09-17T11:00:00.000Z");
+    expect(parseFeedDate("3 Ağu 2026 09:00:00")?.toISOString()).toBe("2026-08-03T06:00:00.000Z");
+    expect(parseFeedDate("11 Ara 2025")?.toISOString()).toBe("2025-12-10T21:00:00.000Z");
     expect(parseFeedDate("hiç")).toBeUndefined();
   });
   it("externalIdFor okunabilir ve kararlı", () => {
@@ -45,10 +51,15 @@ describe("TcmbAdapter / TuikAdapter", () => {
     expect(events[0]!.publishedAt.toISOString()).toBe("2026-10-22T11:00:00.000Z");
     expect(tcmbSection({ id: "x", title: "Enflasyon Raporu 2026-IV", link: "" }).section).toBe("rapor");
   });
-  it("TÜİK: /en/ bültenlerini eler, konu bölümünü tanır", () => {
-    const events = new TuikAdapter({ feedUrl: "https://example.test/atom" }).eventsFromXml(tuikXml);
-    expect(events.map((e) => e.payload["section"])).toEqual(["fiyat", "buyume"]);
-    expect(tuikSection({ id: "x", title: "İşgücü İstatistikleri, Ağustos 2026", link: "" }).section).toBe("isgucu");
+  it("TCMB canlı Atom: Türkçe tarih, göreli id, http → https", () => {
+    const events = new TcmbAdapter().eventsFromXml(tcmbAtom);
+    expect(events).toHaveLength(20);
+    const e = events[0]!;
+    expect(e.title).toBe("Makroihtiyati Çerçeveye İlişkin Basın Duyurusu (2026-43)");
+    expect(e.externalId).toMatch(/^duy2026-43-[0-9a-f]{8}$/);
+    expect(e.url).toBe("https://www.tcmb.gov.tr/wps/wcm/connect/tr/tcmb+tr/main+menu/duyurular/basin/2026/duy2026-43");
+    expect(e.publishedAt.toISOString()).toBe("2026-09-30T21:00:00.000Z");
+    expect(events.find((x) => x.title.startsWith("Para Politikası Kurulu Toplantı Özeti"))?.payload["section"]).toBe("ppk");
   });
   it("fetchNew since filtresi + belge indirme", async () => {
     _resetHttpState();
@@ -69,10 +80,13 @@ describe("TcmbAdapter / TuikAdapter", () => {
     const s = new TcmbAdapter({ feedUrl: "x" }).schedule();
     expect(intervalFor(s, new Date(), true)).toBe(30);
     expect(intervalFor(s, new Date(), false)).toBe(600);
-    expect(intervalFor(new TuikAdapter({ feedUrl: "x" }).schedule())).toBe(900);
+    expect(intervalFor(new TuikAdapter({ baseUrl: "x" }).schedule())).toBe(900);
   });
   it("ortam değişkeni besleme adresini ezer", () => {
     process.env.TCMB_FEED_URL = "https://ornek.test/tcmb.xml";
     try { expect(new TcmbAdapter().feedUrl).toBe("https://ornek.test/tcmb.xml"); } finally { delete process.env.TCMB_FEED_URL; }
+  });
+  it("boş .env (feedUrl: undefined) varsayılan adresi ezmez", () => {
+    expect(new TcmbAdapter({ feedUrl: undefined }).feedUrl.startsWith("https://www.tcmb.gov.tr/")).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Prova için sahte kaynak + Telegram sunucusu. Fixture'ları gerçek sitelerin adres şemasıyla sunar:
  *  - Resmi Gazete: /eskiler/YYYY/MM/YYYYMMDD.htm (istenen güne uyarlanmış fihrist), /eskiler/.../YYYYMMDD-N.htm (madde metni)
- *  - KAP: /tr/api/disclosures (tarihler "şimdi"ye çekilmiş liste), /tr/Bildirim/<no> (bildirim metni)
+ *  - KAP: POST /tr/api/disclosure/list/main (tarihler "şimdi"ye çekilmiş liste), /tr/Bildirim/<no> (bildirim metni)
  *  - Telegram: POST /bot<token>/sendMessage → kaydedilir; GET /__telegram ile okunur
  *  - POST /__mode?rg=broken|normal → Resmi Gazete fihristini "yeniden tasarlanmış" (madde bağlantısız) sayfaya çevirir
  *  - Hız ölçümü: rg/kap "pending" modunda kaynak henüz yayımlamamış gibi davranır (fihrist 404, KAP boş liste)
@@ -63,7 +63,7 @@ export function startMockServer(port = 0): Promise<MockServer> {
       const dir = RG_DOCS[m[1]!];
       return dir ? send(200, pre("Resmî Gazete", read(new URL(`resmi-gazete/${dir}/document.txt`, AG)))) : send(404, "yok");
     }
-    if (path === "/tr/api/disclosures") {
+    if (path === "/tr/api/disclosure/list/main") {
       hit("kap:list");
       if (kapMode === "pending") return send(200, "[]", "application/json; charset=utf-8");
       // Tüm tarihler şimdiye çekilir (sıra korunarak), böylece worker'ın "son 2 gün" penceresine girer.
@@ -72,6 +72,8 @@ export function startMockServer(port = 0): Promise<MockServer> {
       return send(200, body, "application/json; charset=utf-8");
     }
     if (/^\/tr\/Bildirim\/\d+/.test(path)) { hit("kap:doc"); return send(200, pre("KAP Bildirim", kapDoc)); }
+    // Sahte sunucuda PDF yok → adapter bildirim sayfasına düşer
+    if (/^\/tr\/api\/BildirimPdf\/\d+/.test(path)) { hit("kap:pdf"); return send(404, "yok"); }
 
     m = /^\/bot([^/]+)\/sendMessage$/.exec(path);
     if (m && req.method === "POST") {

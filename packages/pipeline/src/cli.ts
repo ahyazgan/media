@@ -11,6 +11,7 @@
  *   pnpm pipeline:run -- --calendar [--fixture]     # TCMB/TÜİK takvimini calendar_events'e senkronla
  *   pnpm pipeline:run -- --bulletin [--dry]         # sabah bültenini gönder (--dry: yalnızca konsola yaz)
  *   pnpm pipeline:run -- --market                   # EVDS kurlarını market_quotes'a çek (EVDS_API_KEY gerekir)
+ *   pnpm pipeline:run -- --source kap --limit 5     # yalnızca en yeni 5 olay (canlı denemede model maliyetini sınırlar)
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";
@@ -103,12 +104,12 @@ if (source === "kap") {
     events = await k.fetchNew(since ? new Date(since) : new Date(Date.now() - 86_400_000));
   }
 } else if (source === "tcmb" || source === "tuik") {
-  const a = source === "tcmb" ? new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }) : new TuikAdapter({ feedUrl: env.TUIK_FEED_URL });
+  const a = source === "tcmb" ? new TcmbAdapter({ feedUrl: env.TCMB_FEED_URL }) : new TuikAdapter({ baseUrl: env.TUIK_BASE_URL });
   if (args.get("fixture") === "true") {
-    const xml = readFileSync(new URL(`../../sources/fixtures/${source === "tcmb" ? "tcmb-basin.xml" : "tuik-bulten.xml"}`, import.meta.url), "utf8");
-    events = a.eventsFromXml(xml);
-    // Fixture externalId'leri bağlantı hash'i içerir; agents/fixtures klasörleri feedId ön ekine göre eşlenir
-    const dirs = source === "tcmb" ? { "duy2026-38": "01-ppk-faiz-karari", "duy2026-37": "02-zorunlu-karsilik" } : { "tuketici-fiyat-endeksi": "01-tufe", "donemsel-gayrisafi": "02-gsyh" };
+    const fx = readFileSync(new URL(`../../sources/fixtures/${source === "tcmb" ? "tcmb-basin.xml" : "tuik-press-latest.json"}`, import.meta.url), "utf8");
+    events = a instanceof TcmbAdapter ? a.eventsFromXml(fx) : (a as TuikAdapter).eventsFromJson(JSON.parse(fx));
+    // Fixture externalId'leri bağlantı hash'i / bülten numarası içerir; agents/fixtures klasörleri ön eke göre eşlenir
+    const dirs = source === "tcmb" ? { "duy2026-38": "01-ppk-faiz-karari", "duy2026-37": "02-zorunlu-karsilik" } : { "isgucu-istatistikleri": "03-isgucu", "dis-ticaret-istatistikleri": "04-dis-ticaret" };
     const map: Record<string, string> = {};
     for (const e of events) { const hit = Object.entries(dirs).find(([k]) => e.externalId.startsWith(k)); if (hit) map[e.externalId] = hit[1]; }
     adapter = fixtureAdapter(a, source, map);
@@ -137,6 +138,11 @@ if (source === "kap") {
   process.exit(1);
 }
 
+const limit = Number(args.get("limit"));
+if (Number.isInteger(limit) && limit > 0 && events.length > limit) {
+  events = [...events].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()).slice(0, limit);
+  console.log(`[cli] --limit ${limit}: en yeni ${limit} olay işlenecek`);
+}
 const inserted = await ingestEvents(handle.db, events);
 console.log(`[cli] ${events.length} event, ${inserted.length} yeni`);
 const outcomes = await processPending({

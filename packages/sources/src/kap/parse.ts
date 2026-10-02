@@ -1,10 +1,12 @@
 /**
  * KAP (kap.org.tr) bildirim listesi ayrıştırıcısı.
  *
- * Kaynak: `GET https://www.kap.org.tr/tr/api/disclosures` — sitenin kendi ön yüzünün kullandığı, kimlik
- * doğrulaması istemeyen JSON uç noktası. Son bildirimleri (yaklaşık 50–100 kayıt) döndürür; her kayıt
- * `{ basic: {...}, detail?: {...} }` biçimindedir. Alan adları KAP'ın sürümüyle oynayabildiğinden
- * ayrıştırıcı hoşgörülüdür: `basic` sarmalayıcısı olmayan düz nesneleri ve alan adı eş anlamlılarını kabul eder.
+ * Kaynak (canlıda doğrulandı 2026-10-02): `POST https://www.kap.org.tr/tr/api/disclosure/list/main` gövdesi
+ * `{ fromDate: "dd.MM.yyyy", toDate: "dd.MM.yyyy", memberTypes: ["IGS","DDK"] }` — sitenin ana sayfasının kullandığı, kimlik
+ * doğrulaması istemeyen JSON uç noktası; her kayıt `{ disclosureBasic: {...}, disclosureDetail: {...} }` biçimindedir
+ * (unvan `companyTitle`, kodlar `stockCode: "NRBNK, NYB"`, eski KAP işareti `disclosureDetail.oldKap`). Eski uç
+ * `GET /tr/api/disclosures` (`{ basic, detail }`, `kapTitle`) artık yanıt vermiyor. Alan adları KAP'ın sürümüyle
+ * oynayabildiğinden ayrıştırıcı hoşgörülüdür: iki sarmalayıcıyı, düz nesneleri ve alan adı eş anlamlılarını kabul eder.
  * Gerçek bir kopya için: `pnpm --filter @kaynak/sources capture:kap`.
  */
 
@@ -44,8 +46,9 @@ const DEFAULT_BASE = "https://www.kap.org.tr";
 export function disclosureUrl(index: number, baseUrl = DEFAULT_BASE): string {
   return `${baseUrl.replace(/\/$/, "")}/tr/Bildirim/${index}`;
 }
+/** Bildirimin PDF dökümü (2026-10'dan beri /tr/api altında; eski /tr/BildirimPdf 404 döner) */
 export function disclosurePdfUrl(index: number, baseUrl = DEFAULT_BASE): string {
-  return `${baseUrl.replace(/\/$/, "")}/tr/BildirimPdf/${index}`;
+  return `${baseUrl.replace(/\/$/, "")}/tr/api/BildirimPdf/${index}`;
 }
 
 /** "07.09.2025 18:31:24" (Türkiye saati; Türkiye 2016'dan beri kalıcı UTC+3) → Date */
@@ -85,7 +88,10 @@ const str = (o: Rec, ...keys: string[]): string => {
 export function parseDisclosure(raw: unknown, baseUrl = DEFAULT_BASE): KapDisclosure | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const outer = raw as Rec;
-  const basic = (outer["basic"] && typeof outer["basic"] === "object" ? outer["basic"] : outer) as Rec;
+  const wrap = outer["disclosureBasic"] ?? outer["basic"];
+  const basic = (wrap && typeof wrap === "object" ? wrap : outer) as Rec;
+  const detailRaw = outer["disclosureDetail"] ?? outer["detail"];
+  const detail = (detailRaw && typeof detailRaw === "object" ? detailRaw : {}) as Rec;
   const index = Number(str(basic, "disclosureIndex", "index", "id"));
   if (!Number.isInteger(index) || index <= 0) return undefined;
   const publishedAt = parseKapDate(str(basic, "publishDate", "publishedAt", "date"));
@@ -94,11 +100,11 @@ export function parseDisclosure(raw: unknown, baseUrl = DEFAULT_BASE): KapDisclo
   const subject = str(basic, "ruleTypeTerm", "subject", "title") || KAP_CLASS_LABELS[cls];
   return {
     index, publishedAt,
-    companyName: str(basic, "kapTitle", "companyName", "company"),
+    companyName: str(basic, "kapTitle", "companyTitle", "companyName", "company"),
     stockCodes: splitStockCodes(basic["stockCodes"] ?? basic["relatedStocks"] ?? basic["stockCode"]),
     disclosureClass: cls, classLabel: KAP_CLASS_LABELS[cls],
     subject, summary: str(basic, "summary", "disclosureSummary"),
-    isOldKap: basic["isOldKap"] === true || basic["isOldKap"] === "true",
+    isOldKap: [basic["isOldKap"], detail["oldKap"]].some((v) => v === true || v === "true"),
     attachmentCount: Number(basic["attachmentCount"] ?? 0) || 0,
     url: disclosureUrl(index, baseUrl),
   };

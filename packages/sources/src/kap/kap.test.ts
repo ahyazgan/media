@@ -4,8 +4,36 @@ import { KapAdapter } from "./adapter.js";
 import { parseDisclosureList, parseKapDate, shortCompanyName, splitStockCodes } from "./parse.js";
 import { intervalFor } from "../types.js";
 import { _resetHttpState } from "../http.js";
+import { documentToText } from "../extract.js";
 
+// Sentetik örnek (eski { basic } biçimi; ajan altın örnekleri bu numaralara bağlı)
 const json = JSON.parse(readFileSync(new URL("../../fixtures/kap-disclosures.json", import.meta.url), "utf8"));
+// Canlıdan alınmış kısaltılmış liste (POST /tr/api/disclosure/list/main, 2026-10-02) ve bir bildirim PDF'i
+const live = JSON.parse(readFileSync(new URL("../../fixtures/kap-list-main.json", import.meta.url), "utf8"));
+const livePdf = readFileSync(new URL("../../fixtures/kap-bildirim-1671363.pdf", import.meta.url));
+
+describe("KAP canlı biçim (disclosureBasic)", () => {
+  it("companyTitle/stockCode alanlarını okur, kodsuz kayıtları eler", () => {
+    const events = new KapAdapter().eventsFromJson(live);
+    expect(events.map((e) => e.externalId)).toEqual(["1671363", "1671362", "1671361", "1671358", "1671357", "1671356", "1671330"]);
+    const e = events[0]!;
+    expect(e.title).toBe("DYO BOYA FABRİKALARI SANAYİ VE TİCARET A.Ş. — Özel Durum Açıklaması (Genel)");
+    expect(e.payload["stockCodes"]).toEqual(["DYOBY"]);
+    expect(e.payload["summary"]).toBe("Görevden Ayrılma ve Atama Hk.");
+    expect(e.publishedAt.toISOString()).toBe("2026-10-02T12:43:24.000Z");
+    expect(events[1]!.payload["stockCodes"]).toEqual(["NRBNK", "NYB"]);
+  });
+  it("bildirim PDF'inden metin çıkar", async () => {
+    const text = await documentToText("application/pdf", livePdf);
+    expect(text).toContain("Mali İşler ve Finans");
+  });
+  it("liste gövdesi: since gününden bugüne, en fazla 7 gün", () => {
+    const a = new KapAdapter();
+    const now = new Date("2026-10-02T12:00:00Z");
+    expect(JSON.parse(a.listBody(new Date("2026-10-01T22:30:00Z"), now))).toEqual({ fromDate: "02.10.2026", toDate: "02.10.2026", memberTypes: ["IGS", "DDK"] });
+    expect(JSON.parse(a.listBody(new Date(0), now)).fromDate).toBe("25.09.2026");
+  });
+});
 
 describe("KAP parse", () => {
   it("Türkiye saatini UTC'ye çevirir", () => {
@@ -68,33 +96,40 @@ describe("KapAdapter", () => {
     const only = new KapAdapter({ classes: ["FR"] });
     expect(only.eventsFromJson(json).map((e) => e.externalId)).toEqual(["1400005"]);
   });
-  it("fetchNew since'ten yenileri döndürür; JSON accept başlığı gönderir", async () => {
+  it("fetchNew since'ten yenileri döndürür; JSON gövdeli POST gönderir", async () => {
     _resetHttpState();
     let accept = "";
+    let method = "";
+    let body = "";
     const fetchImpl: typeof fetch = async (input, init) => {
       const url = String(input);
       if (url.endsWith("/robots.txt")) return new Response("User-agent: *\nAllow: /\n", { status: 200 });
       accept = (init?.headers as Record<string, string>)["accept"] ?? "";
+      method = init?.method ?? "";
+      body = String(init?.body ?? "");
+      expect(url).toBe("https://www.kap.org.tr/tr/api/disclosure/list/main");
       return new Response(JSON.stringify(json), { status: 200, headers: { "content-type": "application/json" } });
     };
     const a = new KapAdapter({ http: { fetchImpl, respectRobots: true } });
     const events = await a.fetchNew(new Date("2026-09-25T14:00:00Z"));
     expect(accept).toBe("application/json");
+    expect(method).toBe("POST");
+    expect(JSON.parse(body).memberTypes).toEqual(["IGS", "DDK"]);
     expect(events.map((e) => e.externalId)).toEqual(["1400006", "1400005", "1400004", "1400003"]);
   });
-  it("fetchDocument HTML 404 verirse PDF'e düşer", async () => {
+  it("fetchDocument önce PDF'i dener; PDF 404 verirse bildirim sayfasına düşer", async () => {
     _resetHttpState();
     const fetchImpl: typeof fetch = async (input) => {
       const url = String(input);
       if (url.endsWith("/robots.txt")) return new Response("", { status: 404 });
-      if (/\/Bildirim\//.test(url)) return new Response("yok", { status: 404 });
-      return new Response(Buffer.from("%PDF-1.4"), { status: 200, headers: { "content-type": "application/pdf" } });
+      if (/BildirimPdf/.test(url)) return new Response("yok", { status: 404 });
+      return new Response("<html><body>bildirim</body></html>", { status: 200, headers: { "content-type": "text/html" } });
     };
     const a = new KapAdapter({ http: { fetchImpl } });
     const [ev] = a.eventsFromJson(json);
     const doc = await a.fetchDocument(ev!);
-    expect(doc.mime).toBe("application/pdf");
-    expect(doc.url).toBe("https://www.kap.org.tr/tr/BildirimPdf/1400006");
+    expect(doc.mime).toBe("text/html");
+    expect(doc.url).toBe("https://www.kap.org.tr/tr/Bildirim/1400006");
   });
   it("zamanlama: hafta içi seans saatinde 60 sn, hafta sonu ve gece 300 sn", () => {
     const s = adapter.schedule();

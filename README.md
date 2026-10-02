@@ -50,7 +50,7 @@ pnpm --filter @kaynak/sources capture:kap     # gerçek liste JSON'unu fixture o
 - **Şirketler:** payload'daki `companies` listesi pipeline'da `companies` (upsert) ve `company_events` tablolarına yazılır. `isNews=false` bildirimler haber olmaz ama `/sirket/[kod]` bildirim geçmişinde "Rutin" etiketiyle listelenir. Haberin `tickers` alanı şirket kodlarını içerir; publish sonrası `/sirket/<kod>` de revalidate edilir.
 - **Ana sayfa:** `KapFeedLive` sunucudan gelen listeyle açılır, sekme görünürken 30 sn'de bir `/api/kap/feed`'i yoklar.
 - **Hukuk:** KAP kullanım koşulları Faz 2 başında okunmalı (şartname §10). Ham veri yeniden dağıtılmaz; her haber KAP'taki belgeye linklenir. Bu yüzden `sources.kap.enabled` varsayılan `false`; koşullar onaylanınca `--enable kap` ile açılır.
-- **Doğrulama sınırı:** Geliştirme ortamından kap.org.tr'ye erişilemediği için liste JSON alan adları (`basic.disclosureIndex`, `publishDate`, `kapTitle`, `stockCodes`, `disclosureClass`, `ruleTypeTerm`, `summary`, `isOldKap`) kamuya açık kullanımlardan derlendi; ayrıştırıcı eş anlamlı alan adlarını ve `basic` sarmalayıcısı olmayan biçimi de kabul eder. İlk canlı çalıştırmada `capture:kap` çıktısını `packages/sources/src/kap/parse.ts` ile karşılaştır. `packages/agents/fixtures/kap/` altındaki belgeler **sentetiktir** (gerçek şirket değil).
+- **Doğrulama:** 2026-10-02'de canlıda doğrulandı. Liste `POST /tr/api/disclosure/list/main` (`{ fromDate, toDate, memberTypes: ["IGS","DDK"] }`), kayıtlar `{ disclosureBasic, disclosureDetail }` (`companyTitle`, `stockCode`); belge bildirimin PDF dökümü `/tr/api/BildirimPdf/<no>` (yeni bildirim sayfası metni istemci tarafında yükler). Ayrıştırıcı eski `{ basic }` biçimini de kabul eder. Gerçek örnekler: `packages/sources/fixtures/kap-list-main.json`, `kap-bildirim-1671363.pdf`. `packages/agents/fixtures/kap/` altındaki belgeler hâlâ **sentetiktir** (gerçek şirket değil).
 
 Docker ile tam kurulum: `docker compose up -d postgres redis minio`, `.env` içinde `DATABASE_URL=postgres://…` ve `REDIS_URL=redis://localhost:6379`, sonra `pnpm dev:worker`.
 
@@ -63,7 +63,8 @@ pnpm pipeline:run -- --bulletin --dry            # sabah bültenini konsola yaz;
 pnpm --filter @kaynak/web build && pnpm --filter @kaynak/web start   # PWA yalnızca üretim derlemesinde (public/sw.js)
 ```
 
-- **TCMB / TÜİK:** RSS/Atom tabanlı `FeedAdapter` (`packages/sources/src/feed/`); besleme ve takvim adresleri `.env` ile ezilebilir.
+- **TCMB / TÜİK:** TCMB Atom beslemesi (`FeedAdapter`, `packages/sources/src/feed/`); TÜİK veri portalının JSON API'si (`packages/sources/src/tuik.ts`).
+  Besleme, taban ve takvim adresleri `.env` ile ezilebilir.
   Worker, `calendar_events`'te yayına 5 dk kala / 30 dk sonrasına kadar kaynağı 30 sn'de bir tarar (`isCalendarHot`), diğer zamanlarda
   TCMB 10 dk, TÜİK 15 dk. Yayınlanan haber ±6 saat içindeki takvim girdisine bağlanır (`/takvim`'de "Açıklandı").
 - **PWA:** `app/manifest.ts` (standalone, maskable ikonlar, share_target → `/ara`), `app/sw.ts` (Serwist: kabuk precache, `/api/*` network-first
@@ -75,9 +76,11 @@ pnpm --filter @kaynak/web build && pnpm --filter @kaynak/web start   # PWA yaln�
 - **RSS:** `/rss.xml` son 50 haber, kaynak belge bağlantısıyla.
 - **Sabah bülteni:** `/bulten` çift onaylı abonelik (`/api/bulten/abone|onay|iptal`, List-Unsubscribe başlığı); worker her gün `BULLETIN_TIME`'da
   (varsayılan 07:30 TR) bugünün Resmi Gazete'si + takvimi + son 24 saatin en önemli 5 haberini gönderir. `SMTP_URL` yoksa `.eml` dosyaları `storage/mail/` altına yazılır.
-- **Doğrulama sınırı:** Bu ortamdan tcmb.gov.tr / tuik.gov.tr'ye erişilemedi. Varsayılan besleme/takvim adresleri ve sayfa yapıları
-  kamuya açık bilgiden derlendi; ayrıştırıcılar RSS 2.0/Atom ve genel tablo/liste yapılarına hoşgörülüdür. İlk canlı çalıştırmada
-  `--source tcmb`, `--source tuik` ve `--calendar` çıktısını kontrol edin; adres değiştiyse `.env`'den ezin. `packages/agents/fixtures/tcmb|tuik` sentetiktir.
+- **Doğrulama:** 2026-10-02'de canlıda doğrulandı (`pnpm --filter @kaynak/sources probe`: liste + ilk belge, DB/model yok). TCMB: Atom, tarihler
+  "1 Eki 2026 14:00:00", bağlantılar http:// (https'e yükseltilir); takvim "Takvim" sayfasındaki dört sütunlu tablo. TÜİK: data.tuik.gov.tr
+  veriportali.tuik.gov.tr'ye (SPA) yönlenir; bültenler `/api/tr/press/latest` + `/api/tr/press/<no>` (`X-Requested-With: XMLHttpRequest` olmadan 403),
+  takvim `www.tuik.gov.tr/Kurumsal/GetYillikHaberBulteniListesi?yil=` (tüm kurumlar; yalnızca TÜİK satırları alınır). Gerçek örnekler
+  `packages/sources/fixtures/{tcmb-basin-atom.xml,tcmb-takvim.html,tuik-press-*.json,tuik-takvim-2026.json}`. `packages/agents/fixtures/tcmb|tuik` sentetiktir.
   Lighthouse bu ortamda koşulamadı; PWA ölçütleri (manifest, SW, çevrimdışı, ikonlar) Playwright ile doğrulandı.
 
 ## Admin, SEO ve kurumsal (Faz 4)

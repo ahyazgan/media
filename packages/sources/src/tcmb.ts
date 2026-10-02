@@ -6,7 +6,8 @@ import type { FeedItem } from "./feed/parse.js";
  * TCMB portalı adresleri sık değiştirdiğinden `TCMB_FEED_URL` ile ezilebilir (README "Doğrulama sınırı").
  * Zamanlama (şartname §4): takvim saatinde 30 sn (worker, calendar_events'e bakarak `hot` verir), diğer zamanlarda 10 dk.
  */
-export const TCMB_DEFAULT_FEED = "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Duyurular/Basin/rss";
+// Canlıda doğrulandı (2026-10-02): Atom 1.0, tarihler "1 Eki 2026 14:00:00" (Türkiye saati), bağlantılar http:// ve küçük harf
+export const TCMB_DEFAULT_FEED = "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Bottom+Menu/Diger/RSS/Basin+Duyurulari";
 
 export function tcmbSection(it: FeedItem): { section: string; sectionLabel: string } {
   const t = it.title.toLocaleLowerCase("tr");
@@ -20,11 +21,12 @@ export class TcmbAdapter extends FeedAdapter {
   constructor(opts: Partial<FeedAdapterOptions> = {}) {
     super({
       id: "tcmb", official: true,
-      feedUrl: opts.feedUrl ?? process.env.TCMB_FEED_URL ?? TCMB_DEFAULT_FEED,
       schedule: { timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600, hotEverySeconds: 30 },
       sectionOf: tcmbSection,
       accept: (it) => !/\/EN\/|\bEN\b/.test(it.link) && !/^press release/i.test(it.title),
       ...opts,
+      // Adres yayılımdan sonra: { feedUrl: undefined } (boş .env) varsayılanı ezmesin
+      feedUrl: opts.feedUrl ?? process.env.TCMB_FEED_URL ?? TCMB_DEFAULT_FEED,
     });
   }
 }
