@@ -48,10 +48,19 @@ export class ResmiGazeteAdapter implements SourceAdapter {
     this.now = opts.now ?? (() => new Date());
   }
 
+  /**
+   * Resmi Gazete gece yarısı (00:00 civarı) yayımlanır, mükerrerler de çoğunlukla gece çıkar: 23:30–03:00 arası 2 dk
+   * (hedef: yayından <10 dk). Sabah 06:00–10:00 arası 3 dk (gecikmeli/mükerrer sayılar), diğer zamanlarda 30 dk.
+   * Pencereler gece yarısını aşamadığı için iki parçadır.
+   */
   schedule(): CronLike {
     return {
       timezone: "Europe/Istanbul",
-      windows: [{ between: ["06:00", "10:00"], everySeconds: 180 }],
+      windows: [
+        { between: ["23:30", "23:59"], everySeconds: 120 },
+        { between: ["00:00", "03:00"], everySeconds: 120 },
+        { between: ["06:00", "10:00"], everySeconds: 180 },
+      ],
       defaultEverySeconds: 1800,
     };
   }

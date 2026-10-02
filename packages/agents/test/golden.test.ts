@@ -62,7 +62,8 @@ describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
     if (expected.classify.importanceMin !== undefined) expect(c.importance).toBeGreaterThanOrEqual(expected.classify.importanceMin);
     if (expected.classify.isNews !== null) expect(c.isNews).toBe(expected.classify.isNews);
     if (!c.isNews) return; // yazılmaz
-    const w = await write({ sourceId: event.sourceId, sourceName: event.sourceName, sourceUrl: event.url, title: event.title, documentText: doc, publishedAt: event.publishedAt, classify: c });
+    const stockCodes = (event as { payload?: { stockCodes?: string[] } }).payload?.stockCodes;
+    const w = await write({ sourceId: event.sourceId, sourceName: event.sourceName, sourceUrl: event.url, title: event.title, documentText: doc, publishedAt: event.publishedAt, classify: c, stockCodes });
     const r = runEditRules(w, doc, { importance: c.importance, reviewThreshold: 99 });
     expect(r.decision, r.reasons.join("; ")).not.toBe("reject");
     const text = `${w.title}\n${w.dek}\n${w.bodyMarkdown}`.toLocaleLowerCase("tr");

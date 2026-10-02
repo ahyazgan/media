@@ -143,3 +143,14 @@ describe("KapAdapter", () => {
     expect(intervalFor(s, new Date("2026-09-25T20:00:00Z"))).toBe(300);  // Cuma 23:00 TR
   });
 });
+
+describe("KAP içerik metni (uzunluk tabanı)", () => {
+  it("Özet Bilgi alanlarını ve sorumluluk beyanını atar", async () => {
+    const pdfText = await documentToText("application/pdf", readFileSync(new URL("../../fixtures/kap-bildirim-1671363.pdf", import.meta.url)));
+    const c = new KapAdapter().contentText(pdfText);
+    expect(c).toContain("Mali İşler ve Finans");
+    expect(c).not.toMatch(/Yukarıdaki|Yapılan Açıklama Güncelleme|KAP'ta yayınlanma/);
+    expect(c.split(/\s+/).length).toBeLessThan(pdfText.split(/\s+/).length / 2);
+    expect(new KapAdapter().contentText("yapısız metin")).toBe("yapısız metin");
+  });
+});

@@ -161,6 +161,36 @@ describe("KAP uçtan uca: bildirim listesi → şirketler → haber / bildirim g
   });
 });
 
+describe("KAP canlı örnek: borsa kodu ve uzunluk tabanı", () => {
+  // Gerçek liste kaydı + PDF (2026-10-02): PDF'te borsa kodu geçmez, sorumluluk beyanı kelime sayısını şişirir
+  const live = JSON.parse(readFileSync(new URL("../../sources/fixtures/kap-list-main.json", import.meta.url), "utf8"));
+  const pdf = readFileSync(new URL("../../sources/fixtures/kap-bildirim-1671363.pdf", import.meta.url));
+  it("yazara KAP'ın kodu verilir; uydurma kod habere girmez; kısa bildirim uzunluk yüzünden incelemeye düşmez", async () => {
+    const k = new KapAdapter();
+    const ev = k.eventsFromJson(live).find((e) => e.externalId === "1671363")!;
+    await ingestEvents(h.db, [ev]);
+    let seenCodes: string[] | undefined;
+    const body = "DYO Boya Fabrikaları (DYOBY), Mali İşler ve Finans Direktörü Erdem Durgut'un görevinden ayrıldığını açıkladı. Şirketin Kamuyu Aydınlatma Platformu'na gönderdiği özel durum açıklamasına göre görevden ayrılan Durgut'un yerine Nihan Küsülü Mali İşler ve Finans Direktörü olarak atandı. Açıklamada değişikliğin gerekçesine ya da yeni direktörün göreve başlama tarihine ilişkin ek bilgi yer almadı. Şirket, açıklamanın Sermaye Piyasası Kurulu'nun Özel Durumlar Tebliği'ne uygun olarak yapıldığını belirtti.";
+    const agents: Agents = {
+      classify: async () => ({ category: "borsa", importance: 2, entities: { companies: ["DYO BOYA"], tickers: ["DYYO"], institutions: [] }, isNews: true, summaryHint: "Finans direktörü değişti." }),
+      write: async (input) => {
+        seenCodes = input.stockCodes;
+        return {
+          title: "DYO Boya'da finans direktörü değişti", dek: "Erdem Durgut'un yerine Nihan Küsülü atandı.", bodyMarkdown: body,
+          keyFacts: [{ text: "Yerine Nihan Küsülü atandı", quoteFromSource: "yerine Mali İşler ve Finans" }],
+          tickers: ["DYYO", "DYOBY"], tags: ["kap", "yonetim", "atama"], numbersUsed: [],
+        };
+      },
+    };
+    const adapter: SourceAdapter = { ...k, id: "kap", official: true, schedule: () => k.schedule(), fetchNew: async () => [], contentText: (t) => k.contentText(t), fetchDocument: async (e) => ({ url: e.url, mime: "application/pdf", bytes: pdf }) };
+    const out = await processPending({ db: h.db, agents, store: new MemoryStore(), reviewThreshold: 4 }, adapter);
+    expect(seenCodes).toEqual(["DYOBY"]);
+    expect(out).toEqual([expect.objectContaining({ kind: "published" })]);
+    const [a] = await h.db.select().from(articles).where(eq(articles.rawEventId, (await h.db.select().from(rawEvents).where(eq(rawEvents.externalId, "1671363")))[0]!.id));
+    expect(a?.tickers).toEqual(["DYOBY"]);
+  });
+});
+
 describe("yardımcılar", () => {
   it("slugify Türkçe karakterleri çevirir", () => {
     expect(slugify("Tüketici cezalarında uzlaşma: İl müdürlüklerine yetki")).toBe("tuketici-cezalarinda-uzlasma-il-mudurluklerine-yetki");

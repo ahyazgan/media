@@ -17,7 +17,7 @@ pnpm db:generate                          # şema değişince migration üret (p
 
 ## Mimari (kısa)
 
-- `packages/sources`: `SourceAdapter` sözleşmesi (`fetchNew`, `fetchDocument`, `schedule`), `politeFetch` (robots, UA, backoff, host başına 2
+- `packages/sources`: `SourceAdapter` sözleşmesi (`fetchNew`, `fetchDocument`, `schedule`; isteğe bağlı `contentText` = uzunluk tabanı), `politeFetch` (robots, UA, backoff, host başına 2
   eş zamanlı istek). Adapter'lar: `resmi-gazete/` (fihrist), `kap/` (JSON liste), `feed/` (RSS/Atom → `tcmb.ts`, `tuik.ts`), `listing/`
   (HTML liste → spk, bddk, epdk, botas), `calendar/` (TÜİK/TCMB takvim içe aktarımı). Her adapter'ın testleri fixture'larla ağsız koşar.
 - `packages/agents`: classify (Haiku) / write (Sonnet) çağrıları, zod şemaları, prompt'lar, kural motoru (`edit/`: numericGroundingCheck,

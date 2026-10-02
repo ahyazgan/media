@@ -155,7 +155,8 @@ ADMIN_USER=editor ADMIN_PASSWORD=<güçlü-parola> pnpm --filter @kaynak/web sta
 - **resmigazete.gov.tr TLS zinciri** TÜBİTAK Kamu SM köküne dayanır; Node bunu tanımaz (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Kök sertifikayı (parmak izini kamusm.gov.tr'de doğrulayarak) `packages/sources/certs/` altına koyun ya da `NODE_EXTRA_CA_CERTS` ile verin. Doğrulamayı kapatmayın.
 - `packages/sources/fixtures/day-2025-09-26.html` yeniden oluşturulmuş bir fihrist; gerçek kopya için `pnpm --filter @kaynak/sources capture -- 2025-09-26`.
 - PGlite dosya modu tek süreç kilidi kullanır: aynı `DATABASE_URL` ile web ve worker'ı aynı anda açmayın (pipeline'ı çalıştırın, sonra web'i açın; ya da Postgres kullanın).
-- `numericGroundingCheck` küçük sayılarda (ör. "5") yanlış kabul üretebilir; yanlış RED üretmemeye öncelik verir. Saat biçimleri ("10:30") jeton sayılmaz.
+- `numericGroundingCheck` küçük sayılarda (ör. "5") yanlış kabul üretebilir; yanlış RED üretmemeye öncelik verir. Saatler ("10:30") ayrı anahtarla eşlenir; yazarın listelediği bileşik ifadeler ("100–228 MVA", "02.10.2026 16:04:43") parçalarıyla doğrulanır. Resmi listedeki yayın zamanı belgeye eşdeğer sayılır (`groundingExtra`).
+- **KAP borsa kodu:** PDF'te kod geçmez; yazara liste kaydındaki kod "Borsa kodu" satırıyla verilir, haberin `tickers` alanına yalnızca bu kodlar ve belgede geçenler girer. Uzunluk alt sınırı PDF'in sabit kalıplarından (Özet Bilgi, sorumluluk beyanı) arınmış içerikten hesaplanır.
 - Sahte ajan (`fakeAgents`) KAP belgelerinde kısa satırlar yüzünden 120 kelimeye ulaşamayıp taslağı review'a düşürebilir; gerçek modelde bu sınır yoktur.
 - TÜİK/TCMB metinlerindeki "tahmin edildi" resmi ifadesi yasaklı kalıp listesine takılır ve haber review'a düşer (reddedilmez); gerçek yazar ajanı kurum ifadesini yeniden kurar.
 - `/_dev/ui` parçası precache'ten dışlanır (klasör adı `%5Fdev` sunucudan 400 döner).

@@ -33,6 +33,8 @@ export interface EditOptions {
    * habere geçirebilir; KAP PDF'indeki saat listedekinden bir saniye sapabildiği için belge metninde bulunmayabilir.
    */
   groundingExtra?: string;
+  /** Uzunluk alt sınırı bu metnin kelime sayısından hesaplanır (kaynağın sabit kalıplarından arınmış belge); yoksa belge */
+  lengthBasisText?: string;
 }
 
 export function wordCount(s: string): number {
@@ -50,7 +52,7 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
   const reasons: string[] = [];
   // Şartname 120 kelime ister; ama 150 kelimelik bir duyurudan 120 kelimelik haber ancak dolguyla çıkar.
   // Alt sınır belge uzunluğunun yarısı: en az 60, en çok 120 (canlı testte TCMB rezerv duyurusu 103 kelimede takıldı).
-  const minWords = opts.minWords ?? Math.min(120, Math.max(60, Math.round(wordCount(documentText) / 2)));
+  const minWords = opts.minWords ?? Math.min(120, Math.max(60, Math.round(wordCount(opts.lengthBasisText ?? documentText) / 2)));
   const maxWords = opts.maxWords ?? 350;
   const maxTitle = opts.maxTitleChars ?? 70;
 

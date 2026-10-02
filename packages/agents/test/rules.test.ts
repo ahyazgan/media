@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEditRules, quoteAppearsIn } from "../src/edit/rules.js";
+import { writeUserMessage } from "../src/prompts.js";
 import type { WriteOutput } from "../src/schemas.js";
 
 const DOC = `Ticaret Bakanlığından: MADDE 1- 30/5/2018 tarihli ve 30436 sayılı Resmî Gazete'de yayımlanan Yönetmeliğin 7 nci maddesinin ikinci fıkrasına aşağıdaki cümleler eklenmiştir. "Komisyon, ticaret il müdürü başkanlığında üç üyeden oluşur." MADDE 3- Bu Yönetmelik 1/10/2025 tarihinde yürürlüğe girer.`;
@@ -99,5 +100,19 @@ describe("kısaltılmış alıntı", () => {
   it("parçalardan biri belgede yoksa ya da sıra bozuksa ret", () => {
     expect(quoteAppearsIn("TÜFE Eylül ayında … yüzde 35 artış gösterdi.", doc)).toBe(false);
     expect(quoteAppearsIn("yüzde 28,4 artış gösterdi … TÜFE Eylül ayında", doc)).toBe(false);
+  });
+});
+
+describe("uzunluk tabanı ve borsa kodu satırı", () => {
+  it("lengthBasisText alt sınırı kalıp metinden arınmış belgeye göre hesaplar", () => {
+    const longDoc = DOC + " " + Array.from({ length: 300 }, () => "beyan").join(" ");
+    const short = { ...good, bodyMarkdown: Array.from({ length: 70 }, () => "Komisyon").join(" ") + " üç üyeden oluşur." };
+    expect(runEditRules(short, longDoc, { importance: 2, reviewThreshold: 4 }).reasons.join(" ")).toMatch(/uzunluk/);
+    expect(runEditRules(short, longDoc, { importance: 2, reviewThreshold: 4, lengthBasisText: DOC }).reasons.join(" ")).not.toMatch(/uzunluk/);
+  });
+  it("writeUserMessage kod verilirse 'Borsa kodu' satırı ekler", () => {
+    const base = { sourceName: "KAP", sourceUrl: "https://x", title: "T", publishedAt: "2026-10-02", summaryHint: "h", category: "borsa", documentText: "d" };
+    expect(writeUserMessage({ ...base, stockCodes: ["NRBNK", "NYB"] })).toContain("\nBorsa kodu: NRBNK, NYB\n");
+    expect(writeUserMessage(base)).not.toContain("Borsa kodu");
   });
 });

@@ -80,3 +80,15 @@ describe("canlı değerlendirmede çıkan biçimler (2026-09-27)", () => {
     expect(numericGroundingCheck(["21 Ekim"], "", doc).missing).toEqual(["21 Ekim"]);
   });
 });
+
+describe("canlı KAP denemesinde çıkan biçimler (2026-10-02)", () => {
+  const kapDoc = `KAP'ta yayınlanma tarihi ve saati: 02.10.2026 16:04:43
+Şirketimiz, Amerika Birleşik Devletleri'nde tesis edilmek üzere, 100–228 MVA aralığında güç transformatörlerinin tedariğine yönelik toplam 90 milyon ABD Doları tutarında sipariş teyidi almıştır.`;
+  it("yazarın listelediği bileşik ifadeler parçalarıyla doğrulanır", () => {
+    expect(numericGroundingCheck(["100–228 MVA", "02.10.2026 16:04:43", "90 milyon"], "", kapDoc).missing).toEqual([]);
+  });
+  it("bileşik ifadedeki tek bir uydurma parça yine reddedilir", () => {
+    expect(numericGroundingCheck(["100–250 MVA"], "", kapDoc).missing).toEqual(["100–250 MVA"]);
+    expect(numericGroundingCheck(["02.10.2026 17:04:43"], "", kapDoc).missing).toEqual(["02.10.2026 17:04:43"]);
+  });
+});

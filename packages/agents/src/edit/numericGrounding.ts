@@ -176,7 +176,11 @@ function grounded(c: string, idx: DocIndex): boolean {
   const v = parseTrNumber(t);
   if (v !== undefined && idx.tokens.has(vkey(v))) return true;
   const parts = splitParts(t);
-  return parts.length > 1 && parts.every((p) => idx.tokens.has(normalizeNumber(p)));
+  if (parts.length > 1 && parts.every((p) => idx.tokens.has(normalizeNumber(p)))) return true;
+  // 5) bileşik ifade (yazarın numbersUsed listesinden: "100–228 MVA", "02.10.2026 16:04:43"): her alt jeton ayrı ayrı doğrulanır;
+  //    biri bile belgede yoksa ret geçerli
+  const sub = compositeTokens(t, true).map((s) => s.trim()).filter((s) => s && s !== t);
+  return sub.length > 0 && sub.every((s) => grounded(s, idx));
 }
 
 export interface GroundingResult { ok: boolean; missing: string[]; checked: number }

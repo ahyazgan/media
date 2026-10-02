@@ -14,7 +14,7 @@ export interface Agents {
   classify(input: { sourceId: string; title: string; textHead: string; section?: string }): Promise<ClassifyOutput>;
   write(input: {
     sourceId: string; sourceName: string; sourceUrl: string; title: string; documentText: string;
-    publishedAt: string; classify: ClassifyOutput; avoidPhrases?: string[];
+    publishedAt: string; classify: ClassifyOutput; avoidPhrases?: string[]; stockCodes?: string[];
   }): Promise<WriteOutput>;
 }
 
@@ -108,18 +108,23 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   if (!adapter.official) forceReview = "verify: resmi olmayan kaynak — ikinci bağımsız kaynak gerekir";
 
   // write (+ yasaklı kalıpta bir kez tekrar)
+  // Borsa kodları kaynağın resmi listesinden (KAP PDF'inde kod geçmez; model tahmin etmesin)
+  const stockCodes = companyRefsOf(row.payload).map((c) => c.code);
   const writeInput = {
     sourceId: row.sourceId, sourceName, sourceUrl: fetched.url, title: row.title,
     documentText: text, publishedAt: row.publishedAt.toISOString(), classify: cls,
+    ...(stockCodes.length ? { stockCodes } : {}),
   };
   let draft = await deps.agents.write(writeInput);
   // Yazara verilen yayın zamanı (resmi listeden) sayı kontrolünde belgeye eşdeğer sayılır
   const groundingExtra = istanbulStamp(row.publishedAt);
-  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra });
+  // Uzunluk alt sınırı kaynağın sabit kalıplarından arınmış metne göre (KAP: sorumluluk beyanı ve "Özet Bilgi" alanları)
+  const lengthBasisText = adapter.contentText?.(text);
+  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra, lengthBasisText });
   if (edit.decision === "retry") {
     log("edit:retry", { externalId: row.externalId, reasons: edit.reasons });
     draft = await deps.agents.write({ ...writeInput, avoidPhrases: edit.banned.map((b) => b.match) });
-    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra });
+    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra, lengthBasisText });
   }
 
   // articles kaydı
@@ -127,7 +132,10 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview ? "published" : "review";
   const reasons = [...edit.reasons, ...(forceReview ? [forceReview] : [])];
   const now = new Date();
-  const tickers = [...new Set([...companyCodes, ...draft.tickers.map((t) => t.toUpperCase())])];
+  // Modelin önerdiği kodlardan yalnızca belgede ya da kaynağın listesinde geçenler kalır (uydurma kod şirket sayfasına bağlanmasın)
+  const docUpper = text.toLocaleUpperCase("tr");
+  const groundedTickers = draft.tickers.map((t) => t.trim().toUpperCase()).filter((t) => /^[A-Z0-9]{3,6}$/.test(t)).filter((t) => stockCodes.includes(t) || new RegExp(`(^|[^A-Z0-9])${t}([^A-Z0-9]|$)`).test(docUpper));
+  const tickers = [...new Set([...companyCodes, ...groundedTickers])];
   const [article] = await deps.db.insert(articles).values({
     slug, status, category: cls.category, importance: cls.importance,
     title: draft.title, dek: draft.dek, bodyMarkdown: draft.bodyMarkdown, keyFacts: draft.keyFacts,

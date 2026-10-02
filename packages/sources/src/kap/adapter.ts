@@ -116,6 +116,17 @@ export class KapAdapter implements SourceAdapter {
   }
 
   /**
+   * KAP PDF'inde asıl içerik "Bildirim İçeriği" ile sondaki sorumluluk beyanı ("Yukarıdaki açıklamalarımızın … beyan ederiz.")
+   * arasındadır; üst kısım (yayın saati, ilgili şirketler, "Güncelleme mi? Hayır" alanları) her bildirimde aynıdır.
+   */
+  contentText(text: string): string {
+    const start = text.search(/Bildirim İçeriği/);
+    const end = text.search(/Yukarıdaki\s+açıklamalarımızın/);
+    const body = text.slice(start >= 0 ? start + "Bildirim İçeriği".length : 0, end > start ? end : undefined);
+    return body.split("\n").filter((l) => !/^Yapılan Açıklama .*\?|^Konuya İlişkin Daha Önce/.test(l.trim())).join("\n").trim() || text;
+  }
+
+  /**
    * Bildirimin PDF dökümünü indirir (bildirim metninin tamamı); olmazsa bildirim sayfasını dener. Yeni KAP sayfası
    * metni istemci tarafında yüklediğinden HTML'de yalnızca başlık bulunur — bu yüzden PDF önce gelir.
    */

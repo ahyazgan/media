@@ -69,7 +69,7 @@ export async function evaluateFixture(fx: Fixture, runner: EvalRunner, run = 1, 
     if (c.output.isNews || opts.writeAll) {
       const input: WriteInput = {
         sourceId: fx.event.sourceId, sourceName: fx.event.sourceName, sourceUrl: fx.event.url, title: fx.event.title,
-        documentText: fx.doc, publishedAt: fx.event.publishedAt, classify: c.output,
+        documentText: fx.doc, publishedAt: fx.event.publishedAt, classify: c.output, stockCodes: stockCodesOf(fx.event),
       };
       // Eşik 99: değerlendirmede önem kapısı değil, yalnızca kalite kuralları ölçülür.
       let w = await runner.write(input);
@@ -134,4 +134,10 @@ export async function runEval(fixtures: Fixture[], runner: EvalRunner, opts: Eva
   };
   await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency ?? 3, jobs.length)) }, worker));
   return results;
+}
+
+/** event.json payload'ındaki borsa kodları (KAP örnekleri) */
+function stockCodesOf(event: unknown): string[] | undefined {
+  const codes = (event as { payload?: { stockCodes?: unknown } }).payload?.stockCodes;
+  return Array.isArray(codes) && codes.length ? codes.map(String) : undefined;
 }

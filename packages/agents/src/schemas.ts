@@ -50,4 +50,6 @@ export interface WriteInput {
   classify: ClassifyOutput;
   /** Önceki deneme yasaklı kalıp yüzünden dönmüşse, kaçınılması gereken ifadeler */
   avoidPhrases?: string[];
+  /** Kaynağın resmi listesindeki borsa kodları (KAP: bildirim PDF'inde kod geçmez, liste kaydından gelir) */
+  stockCodes?: string[];
 }

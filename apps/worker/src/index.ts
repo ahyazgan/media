@@ -8,7 +8,7 @@ import { createDb } from "@kaynak/db";
 import { seed } from "@kaynak/db/seed";
 import { eq } from "drizzle-orm";
 import { rawEvents, sources } from "@kaynak/db";
-import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, intervalFor, type SourceAdapter } from "@kaynak/sources";
+import { BddkAdapter, BotasAdapter, EpdkAdapter, importCalendars, KapAdapter, ResmiGazeteAdapter, SpkAdapter, TcmbAdapter, TuikAdapter, nextDelaySeconds, type SourceAdapter } from "@kaynak/sources";
 import { hasApiKey } from "@kaynak/agents";
 import {
   createMailer, createPushSender, createStore, fakeAgents, ingestEvents, isCalendarHot, istanbulDate, liveAgents, loadEnv, makeOnPublished,
@@ -54,7 +54,7 @@ async function trackHealth(sourceId: string, outcome: Parameters<typeof recordWa
 async function intervalMs(a: SourceAdapter): Promise<number> {
   if (env.WATCH_EVERY_SECONDS) return env.WATCH_EVERY_SECONDS * 1000; // prova / hazırlık ortamı
   const hot = a.schedule().hotEverySeconds ? await isCalendarHot(handle.db, a.id) : false;
-  return intervalFor(a.schedule(), new Date(), hot) * 1000;
+  return nextDelaySeconds(a.schedule(), new Date(), hot) * 1000;
 }
 async function watch(adapter: SourceAdapter, since: Date) {
   let events: Awaited<ReturnType<SourceAdapter["fetchNew"]>>;

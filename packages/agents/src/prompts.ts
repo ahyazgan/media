@@ -52,18 +52,18 @@ Kurallar (istisnasız):
 6. dek: tek cümle, başlığı tekrar etmeden en önemli ayrıntıyı ver.
 7. keyFacts: 2–5 olgu. Her olgunun quoteFromSource alanı belgeden BİREBİR (kopyala) alıntı olmalı; yeniden yazma. Cümleyi kısaltman gerekirse kelime atladığın yere "..." koy; hiçbir kelimeyi işaretsiz atlama.
 8. numbersUsed: başlık, dek ve gövdede kullandığın HER sayıyı belgede geçtiği biçimiyle listele (tarih parçaları, madde numaraları, tutarlar, yüzdeler dahil).
-9. tickers: yalnızca belgede açıkça geçen Borsa İstanbul kodları; yoksa boş dizi.
+9. tickers: yalnızca belgede açıkça geçen ya da mesajdaki "Borsa kodu" satırında verilen Borsa İstanbul kodları; yoksa boş dizi. Kodu asla tahmin etme.
 10. tags: 3–6 kısa Türkçe etiket, küçük harf, kebab-case.
 11. Resmi Gazete metinlerinde "MADDE 1- ... değiştirilmiştir" kalıbını okura anlamlı hale getir: ne değişti, kimi etkiliyor, ne zaman yürürlükte.
 12. Dil: sade, resmi ama okunur Türkçe. Edilgen çatıdan kaçın; özneyi (Bakanlık, Kurul, Banka) kullan.
 14. TCMB/TÜİK bültenlerinde ilk cümle veriyi verir (gösterge, dönem, oran); "yükseldi/geriledi" yalnızca belgedeki yönle. Kurumun kendi tahminlerini ("Enflasyon Raporu'nda yıl sonu tahmini yüzde 26") kuruma atfederek aktarabilirsin; kendi beklentini ekleme, piyasa tepkisi yazma.
-13. KAP bildirimlerinde ilk cümlede şirketin adını ve parantez içinde borsa kodunu ver ("Örnek Enerji (ORNEK) ..."). Finansal raporlarda yalnızca belgedeki tutar ve yüzdeleri aktar; "güçlü", "rekor", "zayıf" gibi nitelemeler ve pay fiyatına etki yorumu yasak. Sözleşme ve ihalelerde karşı tarafı, tutarı ve süreyi belgede yazıldığı gibi ver.
+13. KAP bildirimlerinde ilk cümlede şirketin adını ve parantez içinde borsa kodunu ver ("Örnek Enerji (ORNEK) ..."); kodu mesajdaki "Borsa kodu" satırından al, satır yoksa kod yazma. Finansal raporlarda yalnızca belgedeki tutar ve yüzdeleri aktar; "güçlü", "rekor", "zayıf" gibi nitelemeler ve pay fiyatına etki yorumu yasak. Sözleşme ve ihalelerde karşı tarafı, tutarı ve süreyi belgede yazıldığı gibi ver.
 
 Yalnızca istenen JSON şemasında yanıt ver.`;
 
 export function writeUserMessage(p: {
   sourceName: string; sourceUrl: string; title: string; publishedAt: string;
-  summaryHint: string; category: string; documentText: string; avoidPhrases?: string[];
+  summaryHint: string; category: string; documentText: string; avoidPhrases?: string[]; stockCodes?: string[];
 }): string {
   const avoid = p.avoidPhrases?.length
     ? `\n\nÖNCEKİ DENEME ŞU YASAKLI İFADELER YÜZÜNDEN REDDEDİLDİ, KULLANMA: ${p.avoidPhrases.map((s) => `"${s}"`).join(", ")}`
@@ -71,7 +71,7 @@ export function writeUserMessage(p: {
   return `Kaynak: ${p.sourceName}
 Belge URL: ${p.sourceUrl}
 Yayın tarihi: ${p.publishedAt}
-Bildirim başlığı: ${p.title}
+Bildirim başlığı: ${p.title}${p.stockCodes?.length ? `\nBorsa kodu: ${p.stockCodes.join(", ")}` : ""}
 Kategori: ${p.category}
 Editör notu: ${p.summaryHint}${avoid}
 

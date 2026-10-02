@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseDayPage, normalizeSection, parseIssueNo } from "./parse.js";
 import { ResmiGazeteAdapter, dayPageUrl } from "./adapter.js";
+import { intervalFor, nextDelaySeconds } from "../types.js";
 
 const html = readFileSync(new URL("../../fixtures/day-2025-09-26.html", import.meta.url), "utf8");
 const PAGE = "https://www.resmigazete.gov.tr/eskiler/2025/09/20250926.htm";
@@ -56,9 +57,23 @@ describe("ResmiGazeteAdapter", () => {
     expect(dayPageUrl("https://www.resmigazete.gov.tr", "2025-09-26")).toBe("https://www.resmigazete.gov.tr/eskiler/2025/09/20250926.htm");
     expect(dayPageUrl("https://www.resmigazete.gov.tr", "2025-09-26", 1)).toBe("https://www.resmigazete.gov.tr/eskiler/2025/09/20250926M1.htm");
   });
-  it("06:00–10:00 arası 3 dk, dışında 30 dk", () => {
+  it("gece 23:30–03:00 arası 2 dk, 06:00–10:00 arası 3 dk, dışında 30 dk", () => {
     const s = a.schedule();
-    expect(s.windows[0]?.everySeconds).toBe(180);
-    expect(s.defaultEverySeconds).toBe(1800);
+    expect(intervalFor(s, new Date("2026-10-01T20:45:00Z"))).toBe(120);  // 23:45 TR
+    expect(intervalFor(s, new Date("2026-10-01T21:00:00Z"))).toBe(120);  // 00:00 TR
+    expect(intervalFor(s, new Date("2026-10-01T23:30:00Z"))).toBe(120);  // 02:30 TR
+    expect(intervalFor(s, new Date("2026-10-02T01:00:00Z"))).toBe(1800); // 04:00 TR
+    expect(intervalFor(s, new Date("2026-10-02T04:00:00Z"))).toBe(180);  // 07:00 TR
+    expect(intervalFor(s, new Date("2026-10-02T11:00:00Z"))).toBe(1800); // 14:00 TR
+  });
+});
+
+describe("nextDelaySeconds", () => {
+  const s = new ResmiGazeteAdapter().schedule();
+  it("bekleme sık tarama penceresinin başını aşmaz", () => {
+    expect(nextDelaySeconds(s, new Date("2026-10-01T20:29:00Z"))).toBe(60);   // 23:29 TR → 23:30'a 60 sn
+    expect(nextDelaySeconds(s, new Date("2026-10-01T20:45:00Z"))).toBe(120);  // pencere içinde: 2 dk
+    expect(nextDelaySeconds(s, new Date("2026-10-02T02:45:00Z"))).toBe(900);  // 05:45 TR → 06:00'ya 15 dk
+    expect(nextDelaySeconds(s, new Date("2026-10-02T11:00:00Z"))).toBe(1800); // 14:00 TR: varsayılan
   });
 });
