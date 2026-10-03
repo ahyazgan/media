@@ -37,6 +37,16 @@ LIVE=1 pnpm test:agents         # altın örnekler canlı modelle
 pnpm eval:agents                # rapor: sınıflandırma, kural motoru, maliyet, gecikme (--dry: anahtarsız)
 ```
 
+Windows'ta ev bilgisayarı deneme sunucusu (Postgres kullanıcı kümesi + `next start` + worker, Redis'siz; loglar `logs/`):
+
+```powershell
+pnpm --filter @kaynak/web build                                   # kod değişince yeniden
+powershell -ExecutionPolicy Bypass -File scripts\local-server.ps1 start   # stop | status | restart
+```
+
+Oturum açılışında otomatik başlatma için Başlangıç klasörüne (`shell:startup`) aynı komutu çalıştıran bir `.cmd` konur.
+Postgres ve PGlite arasında geçiş `.env`'deki `DATABASE_URL` ile; Postgres yolları `KAYNAK_PG_BIN`/`KAYNAK_PG_DATA` ile ezilir.
+
 ## KAP (Faz 2)
 
 ```bash
