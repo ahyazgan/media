@@ -1,4 +1,4 @@
-import type { BackgroundItem, RelateInput } from "./schemas.js";
+import type { BackgroundItem, RelateInput, VerifyInput } from "./schemas.js";
 
 export const CLASSIFY_SYSTEM = `Sen Türkiye ekonomi haberciliği için çalışan bir sınıflandırma asistanısın.
 Sana resmi bir kaynaktan (Resmi Gazete, KAP, TCMB, TÜİK) gelen bir bildirimin başlığı ve belge metninin başı verilir.
@@ -106,7 +106,8 @@ belgenin tek ve en önemli olgusunu veren bir flaş yazarsın. Tam haber ayrıca
 
 Kurallar (istisnasız):
 1. Yalnızca belgede yazanı ver. Belgede olmayan sayı, isim, tarih, gerekçe yok. Emin değilsen sayıyı yazma.
-2. headline: en fazla 90 karakter; kurum ya da şirket adı + olgu ("TCMB politika faizini yüzde 35'e indirdi", "TÜİK: Eylül'de yıllık enflasyon yüzde 32,9").
+2. headline: en fazla 90 karakter (hedef 60–80); kurum ya da şirket adı + olgu ("TCMB politika faizini yüzde 35'e indirdi", "TÜİK: Eylül'de yıllık enflasyon yüzde 32,9").
+   Tek şirket adı yeter: bağlı ortaklık, karşı taraf, süre gibi ayrıntılar cümleye kalır ("Demo Holding iştiraki 1,24 milyar TL'lik sözleşme imzaladı").
    Tırnak, ünlem, soru işareti yok; "şok", "rekor", "dev" gibi nitelemeler yok. "bekleniyor", "olabilir", "öngörülüyor" yasak;
    kurumun tahminini başlıkta kurumun fiili olarak ver ("TCMB 2026 sonu enflasyon tahminini yüzde 26 olarak açıkladı").
 3. sentence: TEK cümle (nokta yalnızca sonda), 150–250 karakter, kesinlikle 280'i geçme. Olguyu dönemi ve önceki değeriyle (belgede varsa) verir;
@@ -143,4 +144,48 @@ ${p.textHead.slice(0, 1500)}
 
 Daha önce yayımlanan haberler:
 ${list}`;
+}
+
+export const VERIFY_SYSTEM = `Sen bir haber ajansında doğruluk denetçisisin. Sana resmi bir belge ve bu belgeden yazılmış bir haber (başlık, spot,
+varsa gövde) verilir. Sayıların belgede geçtiği ayrıca denetlendi; senin işin ANLAM: haberdeki her olgusal iddiayı belgeyle karşılaştır ve
+YALNIZCA belgeyle çelişen ya da belgede dayanağı olmayan iddiaları bildir.
+
+Sorun türleri (problem):
+- yon: yön gerçekten TERS (yükseldi ↔ geriledi, indirdi ↔ artırdı, genişledi ↔ daraldı, açık ↔ fazla, aldı ↔ sattı).
+- donem: ay, çeyrek, yıl, gün ya da yürürlük zamanı belgedekinden farklı.
+- olumsuzluk: belgede olumsuz olan olumlu verilmiş ya da tersi (onaylandı ↔ onaylanmadı, uygulanacak ↔ uygulanmayacak, kabul ↔ ret, sürdürülecek ↔ sona erecek).
+- atif: karar, işlem ya da açıklama yanlış kuruma, şirkete, kişiye atfedilmiş; ya da kurumun tahmini/değerlendirmesi kurumdan bağımsız bir olgu gibi verilmiş.
+- baglam: sayı belgede var ama başka bir şeye ait (aylık değer yıllık diye, bir alt grubun oranı genel endeks diye, eski değer yeni diye, faiz koridorunun bir ucu politika faizi diye).
+- desteksiz: belgede (ve varsa ARKA PLAN'da) hiç geçmeyen somut olgu: isim, tutar, gerekçe, sonuç, karşılaştırma, "ilk kez", "rekor", "beklentilerin üzerinde" gibi nitelendirme.
+
+Sorun SAYMA:
+- Özetleme, cümleyi yeniden kurma, sıralama, eş anlamlı fiil ("indirildi" ↔ "düşürüldü", "açıkladı" ↔ "duyurdu").
+- Aynı eylemi doğru ama farklı kelimelerle anlatma ("geri alındı" ↔ "geri alım kapsamında satın aldı", "sözleşme imzalandı" ↔ "anlaşma
+  yaptı", "pay sahibi" ↔ "ortak"); belgedeki toplamın ya da ara durumun düz Türkçeyle verilmesi ("toplam adedi 1.750.000'e ulaştı" ↔
+  "toplam geri alınan payı 1.750.000'e çıkardı").
+- Sayının biçimini değiştirme (yüzde 35 ↔ %35, 1.250.000 TL ↔ 1,25 milyon TL), şirket adının kısaltılması (A.Ş. düşürülmesi, "Örnek Enerji").
+- Belgedeki bir ayrıntının habere alınmaması; üslup; dilbilgisi ve çatı hataları (etken/edilgen uyumsuzluğu, eksik özne) — bunlar
+  olgu hatası değildir.
+- Kendi açıklamanda "eş anlamlı" ya da "sorun değil" diyeceğin bir durum: onu hiç bildirme.
+- Belgedeki başlık, tarih ve yayın bilgisinden çıkan olgular (yayın tarihi, kurum adı, bülten sayısı).
+- ARKA PLAN'daki daha önce yayımlanmış haberlere dayanan, tarihiyle verilmiş cümleler.
+
+Her sorun için: claim = haberdeki ifade (haberden BİREBİR kopyala, en fazla bir cümle); evidence = belgeden BİREBİR alıntı (iddiayla çelişen
+ya da ilgili kısım; kısaltırsan kelime atladığın yere "..." koy, hiçbir kelimeyi işaretsiz atlama; desteksiz için boş bırakabilirsin);
+explanation = tek kısa cümle.
+Haberde belgede geçmeyen, hesaplanmış bir sayı (fark, toplam, baz puan) sayı kontrolünde ayrıca yakalanır; onu bildirme.
+Sorun yoksa issues boş dizi. Emin değilsen bildirme: yanlış alarm doğru haberi geciktirir.
+Yalnızca istenen JSON şemasında yanıt ver.`;
+
+export function verifyUserMessage(p: VerifyInput): string {
+  return `Kaynak: ${p.sourceId}
+
+--- BELGE BAŞLANGICI ---
+${p.documentText}
+--- BELGE SONU ---${p.background ? `\n\n${p.background}` : ""}
+
+--- HABER ---
+Başlık: ${p.title}
+Spot: ${p.dek}${p.body ? `\n\nGövde:\n${p.body}` : ""}
+--- HABER SONU ---`;
 }

@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { type Article, type Db, rawEvents, documents, articles, reviewQueue, companies, companyEvents, type RawEventRow } from "@kaynak/db";
-import type { BackgroundItem, ClassifyOutput, WriteOutput, EditResult, FlashInput, FlashOutput, RelateInput, RelateOutput } from "@kaynak/agents";
-import { checkFlash, formatBackground, runEditRules } from "@kaynak/agents";
+import type { BackgroundItem, ClassifyOutput, WriteOutput, EditResult, FlashInput, FlashOutput, RelateInput, RelateOutput, SemanticResult, VerifyInput, VerifyOutput } from "@kaynak/agents";
+import { acceptIssues, checkFlash, formatBackground, runEditRules } from "@kaynak/agents";
 import { documentToText, type RawEvent, type SourceAdapter } from "@kaynak/sources";
 import type { BlobStore } from "./storage.js";
 import { storageKeyFor } from "./storage.js";
@@ -21,6 +21,8 @@ export interface Agents {
   flash?(input: FlashInput): Promise<FlashOutput>;
   /** Konu eşleştirme (hızlı model): yeni bildirim aynı şirketin önceki bir haberinin devamı mı? Yoksa yalnızca kural kullanılır */
   relate?(input: RelateInput): Promise<RelateOutput>;
+  /** Anlam doğrulaması (hızlı model): haberdeki iddialar belgeyle çelişiyor mu? Yoksa yalnızca sayı/kalıp kuralları uygulanır */
+  verify?(input: VerifyInput): Promise<VerifyOutput>;
 }
 
 export interface PipelineDeps {
@@ -143,6 +145,30 @@ async function processClaimed(deps: PipelineDeps, adapter: SourceAdapter, row: R
     ? deps.agents.flash!({ sourceId: row.sourceId, sourceName, title: row.title, textHead: text.slice(0, 6000), ...(stockCodes.length ? { stockCodes } : {}) })
       .catch((e: Error) => { log("flash:error", { externalId: row.externalId, error: e.message }); return undefined; })
     : undefined;
+
+  // Anlam doğrulaması (sayı kontrolünün göremediği yön/dönem/olumsuzluk/bağlam hataları). failClosed: denetçi çalışmazsa durdur (flaş);
+  // tam metinde denetçi hatası yayını durdurmaz (öteki katmanlar ve önem eşiği yerinde)
+  const semantic = async (p: { title: string; dek: string; body?: string; documentText: string; background?: string; failClosed: boolean }): Promise<SemanticResult> => {
+    if (!deps.agents.verify) return { ok: true, issues: [], dropped: [], reasons: [] };
+    const kind = p.body === undefined ? "flash" : "full";
+    try {
+      const out = await deps.agents.verify({ sourceId: row.sourceId, documentText: p.documentText, title: p.title, dek: p.dek, ...(p.body !== undefined ? { body: p.body } : {}), ...(p.background ? { background: p.background } : {}) });
+      const r = acceptIssues(out.issues, [p.title, p.dek, p.body ?? ""].join("\n"), p.documentText, p.background);
+      log("verify", { externalId: row.externalId, kind, issues: r.issues, dropped: r.dropped });
+      return r;
+    } catch (e) {
+      log("verify:error", { externalId: row.externalId, kind, error: (e as Error).message });
+      return p.failClosed ? { ok: false, issues: [], dropped: [], reasons: ["anlam doğrulaması yapılamadı"] } : { ok: true, issues: [], dropped: [], reasons: [] };
+    }
+  };
+  const flashHead = text.slice(0, 6000);
+  const verifyFlash = (f: FlashOutput) => semantic({ title: f.headline, dek: f.sentence, documentText: flashHead, failClosed: true });
+  // TCMB/TÜİK: az sayıda ve neredeyse hep önemli → doğrulama flaş yazılır yazılmaz (sınıflandırmayla paralel) başlar, yayına ~2 sn kazandırır.
+  // KAP: hacim yüksek, çoğu flaş eşiğinin altında → doğrulama ancak önem eşiği geçilince (boşa model çağrısı olmasın)
+  const flashVerifyP = flashP && row.sourceId !== "kap"
+    ? flashP.then((f) => (f && checkFlash(f, text, { groundingExtra }).ok ? verifyFlash(f) : undefined))
+    : undefined;
+
   const cls = await deps.agents.classify({ sourceId: row.sourceId, title: row.title, textHead: text.slice(0, 2000), section });
   log("classify", { externalId: row.externalId, ...cls });
 
@@ -178,7 +204,11 @@ async function processClaimed(deps: PipelineDeps, adapter: SourceAdapter, row: R
   if (prevFlash) log("flash:reuse", { externalId: row.externalId, slug: prevFlash.slug });
   else if (flashP && !forceReview && cls.importance >= deps.flash!.minImportance) {
     const f = await flashP;
-    const check = f ? checkFlash(f, text, { groundingExtra }) : { ok: false, reasons: ["flaş üretilemedi"] };
+    let check = f ? checkFlash(f, text, { groundingExtra }) : { ok: false, reasons: ["flaş üretilemedi"] };
+    if (f && check.ok) {
+      const sem = (await flashVerifyP) ?? await verifyFlash(f);
+      if (!sem.ok) check = { ok: false, reasons: sem.reasons };
+    }
     if (f && check.ok) {
       const now = new Date();
       const [fa] = await deps.db.insert(articles).values({
@@ -215,8 +245,13 @@ async function processClaimed(deps: PipelineDeps, adapter: SourceAdapter, row: R
     edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra, lengthBasisText, contextText });
   }
 
-  const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview ? "published" : "review";
-  const reasons = [...edit.reasons, ...(forceReview ? [forceReview] : [])];
+  // Anlam doğrulaması: reddedilmeyen her taslak (incelemeye düşecekse de bulgular editöre gerekçe olarak gider)
+  const sem = edit.decision === "reject" ? undefined : await semantic({
+    title: draft.title, dek: draft.dek, documentText: text, background: contextText, failClosed: false,
+    body: [draft.bodyMarkdown, ...draft.keyFacts.map((k) => `- ${k.text}`)].join("\n\n"),
+  });
+  const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview && (sem?.ok ?? true) ? "published" : "review";
+  const reasons = [...edit.reasons, ...(sem?.reasons ?? []), ...(forceReview ? [forceReview] : [])];
   const now = new Date();
   // Modelin önerdiği kodlardan yalnızca belgede ya da kaynağın listesinde geçenler kalır (uydurma kod şirket sayfasına bağlanmasın)
   const docUpper = text.toLocaleUpperCase("tr");

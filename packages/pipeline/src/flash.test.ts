@@ -6,6 +6,7 @@ import type { RawEvent, SourceAdapter } from "@kaynak/sources";
 import type { ClassifyOutput, FlashOutput, WriteOutput } from "@kaynak/agents";
 import { ingestEvents, processEvent, type Agents, type PipelineDeps } from "./pipeline.js";
 import { publishFromReview, rejectFromReview } from "./editorial.js";
+import { requeueRejected } from "./failures.js";
 import { MemoryStore } from "./storage.js";
 
 const DOC = `Para Politikası Kurulu (Kurul), politika faizi olan bir hafta vadeli repo ihale faiz oranını yüzde 36,5'ten yüzde 35'e indirmiştir.
@@ -25,7 +26,7 @@ beforeAll(async () => { h = await createDb("pglite://memory"); await h.migrate()
 afterAll(async () => { await h.close(); });
 
 let n = 0;
-async function run(opts: { importance: number; threshold: number; flash?: FlashOutput; full?: WriteOutput }) {
+async function run(opts: { importance: number; threshold: number; flash?: FlashOutput; full?: WriteOutput; verify?: Agents["verify"] }) {
   const ev: RawEvent = { sourceId: "tcmb", externalId: `duy-flash-${++n}`, title: "Faiz Oranlarına İlişkin Basın Duyurusu (Para Politikası Kurulu)", url: `https://www.tcmb.gov.tr/x/${n}`, publishedAt: new Date(), payloadHash: `h${n}`, payload: { section: "ppk" } };
   const [row] = await ingestEvents(h.db, [ev]);
   const calls = { published: [] as Article[], updated: [] as Article[] };
@@ -33,6 +34,7 @@ async function run(opts: { importance: number; threshold: number; flash?: FlashO
     classify: async () => cls(opts.importance),
     write: async () => opts.full ?? goodFull,
     flash: async () => opts.flash ?? goodFlash,
+    ...(opts.verify ? { verify: opts.verify } : {}),
   };
   const adapter: SourceAdapter = { id: "tcmb", official: true, schedule: () => ({ timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600 }), fetchNew: async () => [], fetchDocument: async (e) => ({ url: e.url, mime: "text/html", bytes: Buffer.from(`<html><body><pre>${DOC}</pre></body></html>`) }) };
   const deps: PipelineDeps = {
@@ -114,6 +116,57 @@ describe("flaş → tam metin (aynı makale)", () => {
     expect(arts).toHaveLength(1);
     expect(arts[0]).toMatchObject({ isFlash: false, title: goodFull.title });
     expect(published.map((a) => a.isFlash)).toEqual([true]);
+  });
+
+  it("anlam doğrulaması: flaşta belgeyle çelişen iddia → flaş yayımlanmaz; tam metinde → incelemeye düşer, gerekçe kuyruğa yazılır", async () => {
+    const wrong = { ...goodFlash, headline: "TCMB politika faizini yüzde 35'e yükseltti" };
+    const verify: Agents["verify"] = async ({ title }) => ({
+      issues: /yükseltti/.test(title) ? [{ claim: "yüzde 35'e yükseltti", problem: "yon" as const, evidence: "yüzde 36,5'ten yüzde 35'e indirmiştir", explanation: "Faiz indirildi." }] : [],
+    });
+    const { outcome, arts, calls } = await run({ importance: 5, threshold: 6, flash: wrong, verify });
+    expect(calls.published).toHaveLength(1);
+    expect(calls.published[0]!.isFlash).toBe(false); // flaş çıkmadı; tam metin doğrudan yayımlandı
+    expect(outcome.kind).toBe("published");
+    expect(arts).toHaveLength(1);
+
+    const r2 = await run({ importance: 3, threshold: 6, full: { ...goodFull, title: "TCMB politika faizini yüzde 35'e yükseltti" }, verify });
+    expect(r2.outcome.kind).toBe("review");
+    if (r2.outcome.kind === "review") expect(r2.outcome.reasons.join(" ")).toMatch(/anlam\/yon: "yüzde 35'e yükseltti"/);
+    const q = await h.db.select().from(reviewQueue).where(eq(reviewQueue.articleId, r2.arts[0]!.id));
+    expect(q[0]!.reason).toMatch(/anlam\/yon/);
+  });
+
+  it("anlam denetçisi düşerse flaş durur (güvenli taraf), tam metin kurallarla yayımlanır; uydurma kanıtlı bulgu yok sayılır", async () => {
+    const down: Agents["verify"] = async () => { throw new Error("API 529 overloaded"); };
+    const r = await run({ importance: 5, threshold: 6, verify: down });
+    expect(r.calls.published.map((a) => a.isFlash)).toEqual([false]);
+    expect(r.outcome.kind).toBe("published");
+    const invented: Agents["verify"] = async () => ({ issues: [{ claim: "yüzde 35'e indirdi", problem: "yon" as const, evidence: "Kurul faizi artırmıştır.", explanation: "uydurma" }] });
+    const r2 = await run({ importance: 5, threshold: 6, verify: invented });
+    expect(r2.calls.published.map((a) => a.isFlash)).toEqual([true]);
+    expect(r2.outcome.kind).toBe("published");
+  });
+
+  it("requeueRejected: sayı kontrolünde reddedilen olay yeniden işlenir; yayındaki flaş kullanılır, ret kaydı kalır; ikinci kez alınmaz", async () => {
+    const first = await run({ importance: 5, threshold: 6, full: { ...goodFull, dek: "Faiz yüzde 33'e indi." } });
+    expect(first.outcome.kind).toBe("rejected");
+    const rawId = first.arts[0]!.rawEventId!;
+    expect(await requeueRejected(h.db, { sourceId: "tcmb", dryRun: true })).toContain(rawId);
+    const [stillProcessed] = await h.db.select().from(rawEvents).where(eq(rawEvents.id, rawId));
+    expect(stillProcessed!.status).toBe("processed"); // kuru çalıştırma dokunmaz
+    expect(await requeueRejected(h.db, { sourceId: "tcmb" })).toContain(rawId);
+    const [row] = await h.db.select().from(rawEvents).where(eq(rawEvents.id, rawId));
+    expect(row!.status).toBe("new");
+    const published: Article[] = [];
+    const agents: Agents = { classify: async () => cls(5), write: async () => goodFull, flash: async () => goodFlash };
+    const adapter: SourceAdapter = { id: "tcmb", official: true, schedule: () => ({ timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600 }), fetchNew: async () => [], fetchDocument: async (e) => ({ url: e.url, mime: "text/html", bytes: Buffer.from(`<html><body><pre>${DOC}</pre></body></html>`) }) };
+    const out = await processEvent({ db: h.db, agents, store: new MemoryStore(), reviewThreshold: 6, flash: { sources: ["tcmb"], minImportance: 4 }, onPublished: async (a) => { published.push(a); }, onUpdated: async () => {} }, adapter, row!);
+    expect(out.kind).toBe("published");
+    expect(published).toHaveLength(0); // flaş zaten dağıtılmıştı; yalnızca güncellendi
+    const arts = await h.db.select().from(articles).where(eq(articles.rawEventId, rawId));
+    expect(arts.map((a) => a.status).sort()).toEqual(["published", "rejected"]);
+    expect(arts.find((a) => a.status === "published")).toMatchObject({ isFlash: false, title: goodFull.title });
+    expect(await requeueRejected(h.db, { sourceId: "tcmb" })).not.toContain(rawId);
   });
 
   it("önem eşiğin altındaysa flaş üretilmez", async () => {

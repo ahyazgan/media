@@ -28,6 +28,8 @@ pnpm db:generate                          # şema değişince migration üret (p
   `processEvent` önce satırı sahiplenir (`raw_events.claimed_at`; aynı olay iki kez işlenmez). `story.ts`: konu dizileri — kural anahtarı
   (KAP konu+kod, TÜİK/TCMB seri, mevzuat adı), KAP "önceki açıklama tarihi", yoksa `relate` (Haiku); dizinin önceki haberleri yazara
   arka plan olur (yalnızca son paragraf; başlık/dek/ilk paragraf sayıları belgeden — `runEditRules` `contextText`).
+  Anlam doğrulaması (`verify`, Haiku; `edit/semantic.ts` `acceptIssues` süzgeci: iddia haberde, kanıt belgede birebir): flaşta bulgu ya da
+  denetçi hatası → flaş yok; tam metinde bulgu → review (denetçi hatası yayını durdurmaz).
 - `packages/db`: Drizzle şeması (`schema.ts`), PGlite/Postgres istemcisi, migration'lar, seed (kaynaklar; KAP/TCMB/TÜİK/… kapalı gelir).
 - `apps/worker`: kayıtlı adapter'ları `sources.enabled`'a göre tarar; takvim saatinde sık tarama; günlük takvim/ölçüt işleri; 07:30 bülten;
   düşen işler `job_failures`.

@@ -13,6 +13,7 @@
  *   pnpm pipeline:run -- --market                   # EVDS kurlarını market_quotes'a çek (EVDS_API_KEY gerekir)
  *   pnpm pipeline:run -- --source kap --limit 5     # yalnızca en yeni 5 olay (canlı denemede model maliyetini sınırlar)
  *   pnpm pipeline:run -- --backfill-stories         # mevcut haberleri konu dizilerine bağla (bir kez; model çağırmaz)
+ *   pnpm pipeline:run -- --requeue-rejected [--source kap] [--dry]  # sayı kontrolünde reddedilenleri yeniden kuyruğa al (worker işler)
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";
@@ -32,6 +33,7 @@ import { composeBulletin, renderBulletin, sendBulletin, sponsorFromEnv } from ".
 import { createPushSender } from "./push.js";
 import { syncMarketQuotes } from "./market.js";
 import { backfillStories } from "./story.js";
+import { requeueRejected } from "./failures.js";
 
 const args = new Map<string, string>();
 for (let i = 2; i < process.argv.length; i++) {
@@ -64,6 +66,14 @@ if (args.get("calendar") === "true") {
 }
 
 // --- Piyasa şeridi ---
+if (args.get("requeue-rejected") === "true") {
+  const source = args.get("source");
+  const ids = await requeueRejected(handle.db, { ...(source ? { sourceId: source } : {}), dryRun: args.get("dry") === "true" });
+  log("requeue-rejected", { count: ids.length, dry: args.get("dry") === "true", note: "worker'ın bekleyen süpürmesi (5 dk, 50'şer) işler" });
+  await handle.close();
+  process.exit(0);
+}
+
 if (args.get("backfill-stories") === "true") {
   log("stories:backfill", await backfillStories(handle.db));
   await handle.close();

@@ -67,6 +67,10 @@ export const fakeAgents: Agents = {
   async relate() {
     return { match: 0, reason: "sahte ajan: model yok" };
   },
+  /** Anlam doğrulaması: sahte yazar belgeden kopyaladığı için sorun bildirmez */
+  async verify() {
+    return { issues: [] };
+  },
   /** Flaş: başlık + belgenin ilk anlamlı cümlesi (belgeden kopya → sayı kontrolünden geçer) */
   async flash({ title, textHead }) {
     const sentence = textHead.split(/(?<=\.)\s+/).map((s) => s.replace(/\s+/g, " ").trim()).find((s) => s.length > 40 && s.length < 280) ?? textHead.slice(0, 200);

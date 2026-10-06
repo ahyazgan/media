@@ -104,6 +104,26 @@ describe("büyüklük sözcüğünün parçası olan çıplak sayı (2026-10-02 
   });
 });
 
+describe("büyüklük sözcüğünde ünlü uyumlu ekler: -luk/-lük, -un/-ün, -daki (2026-10-06 flaş testi)", () => {
+  const doc = "Ödenmiş sermaye 400.000.000 TL'den 1.000.000.000 TL'ye çıkarılacak; artırılan 600.000.000 TL iç kaynaklardan karşılanacaktır.";
+  it("'400 milyonluk', '600 milyonluk', '400 milyonun', '600 milyondaki' değeriyle doğrulanır", () => {
+    const text = "400 milyonluk sermaye 600 milyonluk artırımla büyüyor; 400 milyonun üzerine 600 milyondaki artış ekleniyor.";
+    expect(numericGroundingCheck(["400", "600"], text, doc).missing).toEqual([]);
+    expect(numericGroundingCheck([], "700 milyonluk artırım", doc).ok).toBe(false);
+  });
+});
+
+describe("listedeki sayı metinde yalnızca başka sayının parçasıysa denetlenmez (2026-10-06 flaş testi)", () => {
+  const doc = "Sözleşmenin toplam bedeli 1.240.000.000 TL olup süresi 36 aydır.";
+  it("'2' listede ama metinde tek başına yok ('1.240.000.000' içinde geçiyor) → haber düşmez", () => {
+    expect(numericGroundingCheck(["2", "1.240.000.000", "36"], "Şirket 36 ay süreli 1.240.000.000 TL bedelli sözleşme imzaladı.", doc).missing).toEqual([]);
+  });
+  it("tek başına geçen uydurma sayı yine reddedilir; ondalığın parçası sayılmaz", () => {
+    expect(numericGroundingCheck(["2"], "Şirket 2 sözleşme imzaladı.", doc).missing).toEqual(["2"]);
+    expect(numericGroundingCheck(["1,2"], "Bedel 1,24 milyar TL.", doc).missing).toEqual([]);
+  });
+});
+
 describe("ekli büyüklük sözcükleri ve listede fazladan sayı (2026-10-02 flaş testi)", () => {
   const doc = "Ödenmiş sermaye 400.000.000 TL'den 1.000.000.000 TL'ye bedelsiz olarak artırılacaktır. Sınır yüzde 5'ten yüzde 10'a yükseltilmiştir.";
   it("'400 milyondan 1 milyara' değeriyle doğrulanır", () => {

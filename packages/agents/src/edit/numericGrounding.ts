@@ -27,7 +27,7 @@ const SCALE: Record<string, number> = { bin: 1e3, milyon: 1e6, milyar: 1e9, tril
  * "binde"). Ekler sınırlı listedir: "bina", "binlerce" gibi sözcükler sayı sayılmasın.
  */
 // Zincir yalnızca eksiz parçalar arasında kurulur ("2 milyon 986 bin"); ek yalnızca son parçada ("400 milyondan 1 milyara" iki ayrı sayı)
-const SCALED_RE = /(?<![\p{L}\d])\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?:(?![\p{L}])\s+\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin))*(?:'?(?:d[ae]n|t[ae]n|d[ae]|t[ae]|y?[ae]|l[ıi]k|n[ıi]n|[ıi]n))?(?![\p{L}])/giu;
+const SCALED_RE = /(?<![\p{L}\d])\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin)(?:(?![\p{L}])\s+\d[\d.,]*\s*(?:trilyon|milyar|milyon|bin))*(?:'?(?:d[ae]n|t[ae]n|d[ae]ki|d[ae]|t[ae]|y?[ae]|l[ıiuü]k|n[ıiuü]n|[ıiuü]n))?(?![\p{L}])/giu;
 const SCALED_ONE_RE = new RegExp(SCALED_RE.source, "iu");
 const SCALE_PART_RE = /(\d[\d.,]*)\s*(trilyon|milyar|milyon|bin)/giu;
 const TIME_COLON_RE = /(?<!\d)([01]?\d|2[0-3]):([0-5]\d)(?!\d)/g;
@@ -203,9 +203,17 @@ export function numericGroundingCheck(numbersUsed: string[], articleText: string
   // Metin verildiyse: yazarın listesinden yalnızca metinde gerçekten geçen sayılar denetlenir (listeye fazladan yazılan, yayımlanmayan
   // sayı haberi düşürmesin); metindeki her sayı zaten compositeTokens ile ayrıca denetlenir. Metin boşsa liste olduğu gibi denetlenir.
   const textNorms = new Set(extractNumbers(articleText).map(normalizeNumber));
-  const inText = (n: string) => !articleText.trim() || articleText.includes(n.trim()) || splitParts(n).every((p) => textNorms.has(normalizeNumber(p)));
+  // Sayı sınırıyla: "2" listedeyse "1.240.000.000" içindeki 2 yüzünden metinde sayılmasın (yayımlanmayan sayı haberi düşürüyordu)
+  const inText = (n: string) => !articleText.trim() || standsAlone(n.trim(), articleText) || splitParts(n).every((p) => textNorms.has(normalizeNumber(p)));
   const used = numbersUsed.filter((n) => !scaledParts.has(n.trim()) && inText(n));
   const candidates = new Set<string>([...used, ...compositeTokens(articleText, true)]);
   const missing = [...candidates].filter((c) => !grounded(c, idx));
   return { ok: missing.length === 0, missing, checked: candidates.size };
+}
+
+/** İfade metinde sayı parçası olarak değil kendi başına geçiyor mu ("2" → "1.240.000.000" içinde değil, "2 adet" içinde evet) */
+function standsAlone(expr: string, text: string): boolean {
+  if (!expr) return false;
+  const esc = expr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\d.,])${esc}(?![\\d]|[.,]\\d)`, "u").test(text);
 }

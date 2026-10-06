@@ -97,3 +97,32 @@ export const RelateOutput = z.object({
   reason: z.string(),
 });
 export type RelateOutput = z.infer<typeof RelateOutput>;
+
+/**
+ * Anlam doğrulaması: sayı kontrolünün göremediği hatalar. yon = artış/azalış ters; donem = ay/yıl/tarih farklı; olumsuzluk = olumlu/olumsuz
+ * ters; atif = yanlış kurum/şirket ya da kurumun tahmini haberin iddiası gibi; baglam = sayı belgede var ama başka şeye ait (aylık ↔ yıllık);
+ * desteksiz = belgede hiç dayanağı olmayan somut olgu.
+ */
+export const VERIFY_PROBLEMS = ["yon", "donem", "olumsuzluk", "atif", "baglam", "desteksiz"] as const;
+export const VerifyIssue = z.object({
+  /** Haberdeki sorunlu ifade (haberden birebir) */
+  claim: z.string(),
+  problem: z.enum(VERIFY_PROBLEMS),
+  /** Belgeden birebir alıntı (iddiayla çelişen ya da ilgili kısım); desteksiz için boş olabilir */
+  evidence: z.string(),
+  explanation: z.string(),
+});
+export type VerifyIssue = z.infer<typeof VerifyIssue>;
+export const VerifyOutput = z.object({ issues: z.array(VerifyIssue) });
+export type VerifyOutput = z.infer<typeof VerifyOutput>;
+
+export interface VerifyInput {
+  sourceId: string;
+  documentText: string;
+  title: string;
+  dek: string;
+  /** Tam metin gövdesi; flaşta yok */
+  body?: string;
+  /** Yazara verilen arka plan (formatBackground çıktısı): buna dayanan, tarihiyle verilmiş cümleler desteklidir */
+  background?: string;
+}

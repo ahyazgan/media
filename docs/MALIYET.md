@@ -76,6 +76,15 @@ Modeller: classify=claude-haiku-4-5 ($1/$5 MTok) · write=claude-sonnet-5 ($2/$1
 
 KAP hacmi en belirsiz varsayımdır ve toplamı en çok o belirler.
 
+**Ek hızlı model çağrıları (Ekim 2026, yukarıdaki hesaba dahil değil):**
+
+- Anlam doğrulaması (`verify`): reddedilmeyen her tam metin (belge + haber girdisi) ve flaşa aday her haber (belgenin ilk 6 bin karakteri) için.
+  TCMB/TÜİK'te flaş doğrulaması flaşla birlikte başlar (önem eşiğinin altında kalırsa boşa gider); KAP'ta yalnızca önem eşiği geçilince.
+  Tipik belgede ~0,003–0,005 $; uzun mevzuatta ~0,015 $.
+- Konu eşleştirme (`relate`): yalnızca KAP'ta, kural dizi bulamadığında ve aynı şirketin son 180 günde haberi varsa; ~0,001 $.
+
+Bunlarla RG+KAP tipik toplam kabaca %15–20 artar. Kesin rakam için `pnpm eval:agents` sonrası `cost:estimate --from-eval latest`.
+
 ## Kesinleştirme
 
 1. **Çağrı başı maliyet (API anahtarı gelince):** `pnpm eval:agents`, ardından `pnpm cost:estimate -- --from-eval latest`. Karakter tahmini yerine 22 fixture'ın gerçek token kullanımı kullanılır; düşünme token'ları da ölçüme girer.

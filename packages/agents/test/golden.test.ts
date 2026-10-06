@@ -51,6 +51,11 @@ describe("altın örnekler — bilerek bozulmuş fixture reddedilir (Faz 1 kabul
 
 const live = process.env.LIVE === "1" && hasApiKey();
 describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
+  // Anlam doğrulaması: doğru yazılmış haber/flaşta bulgu = yanlış alarm (ya da yazarın gerçek hatası; çıktıda incelenir). Model
+  // belirlenimci olmadığından tek tek değil toplam oranla sınanır: yanlış alarmın bedeli flaşın çıkmaması / haberin incelemeye düşmesi.
+  const semFlags: string[] = [];
+  let semChecked = 0;
+
   it.each(dirs)("%s: classify + write + edit", async (d) => {
     const { classify } = await import("../src/classify.js");
     const { write } = await import("../src/write.js");
@@ -69,6 +74,14 @@ describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
     const text = `${w.title}\n${w.dek}\n${w.bodyMarkdown}`.toLocaleLowerCase("tr");
     for (const p of expected.mustNotContain) expect(text).not.toContain(p.toLocaleLowerCase("tr"));
     expect(w.title.length).toBeLessThanOrEqual(70);
+    // Anlam doğrulaması: doğru yazılmış haberde bulgu olmamalı (yanlış alarm doğru haberi incelemeye düşürür)
+    const { verify } = await import("../src/verify.js");
+    const { acceptIssues } = await import("../src/edit/semantic.js");
+    const body = [w.bodyMarkdown, ...w.keyFacts.map((k) => `- ${k.text}`)].join("\n\n");
+    const v = await verify({ sourceId: event.sourceId, documentText: doc, title: w.title, dek: w.dek, body });
+    const sem = acceptIssues(v.issues, `${w.title}\n${w.dek}\n${body}`, doc);
+    semChecked++;
+    if (!sem.ok) semFlags.push(`[tam metin] ${d}: ${sem.reasons.join(" | ")}\n    --- ${w.title} / ${w.dek}`);
   });
 
   // Flaş insan onayı beklemeden yayımlandığı için ayrı ve katı: flaş açık kaynaklardaki her haber örneği kurallardan geçmeli
@@ -84,6 +97,19 @@ describe.skipIf(!live)("altın örnekler — canlı model (LIVE=1)", () => {
     expect(r.ok, `${r.reasons.join("; ")} | ${f.headline} | ${f.sentence}`).toBe(true);
     const text = `${f.headline}\n${f.sentence}`.toLocaleLowerCase("tr");
     for (const p of expected.mustNotContain) expect(text).not.toContain(p.toLocaleLowerCase("tr"));
+    const { verify } = await import("../src/verify.js");
+    const { acceptIssues } = await import("../src/edit/semantic.js");
+    const head = doc.slice(0, 6000);
+    const v = await verify({ sourceId: event.sourceId, documentText: head, title: f.headline, dek: f.sentence });
+    const sem = acceptIssues(v.issues, `${f.headline}\n${f.sentence}`, head);
+    semChecked++;
+    if (!sem.ok) semFlags.push(`[flaş] ${d}: ${sem.reasons.join(" | ")}\n    --- ${f.headline} / ${f.sentence}`);
+  });
+
+  it("anlam doğrulaması: doğru örneklerde bulgu oranı en çok %10", () => {
+    if (semFlags.length) console.log(`anlam bulguları (${semFlags.length}/${semChecked}):\n${semFlags.join("\n")}`);
+    expect(semChecked).toBeGreaterThan(0); // tam koşuda ~32 (filtreli koşuda daha az)
+    expect(semFlags.length, semFlags.join("\n")).toBeLessThanOrEqual(Math.max(1, Math.floor(semChecked * 0.1)));
   });
 });
 
