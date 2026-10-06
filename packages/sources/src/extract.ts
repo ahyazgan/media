@@ -29,10 +29,42 @@ function pickRoot($: cheerio.CheerioAPI) {
   return $("body").length ? $("body") : $.root();
 }
 
+interface PdfTextItem { str: string; width: number; transform: number[] }
+interface PdfPage { getTextContent(o: { normalizeWhitespace: boolean; disableCombineTextItems: boolean }): Promise<{ items: PdfTextItem[] }> }
+type PdfParse = (b: Buffer, o?: { pagerender?: (p: PdfPage) => Promise<string> }) => Promise<{ text: string }>;
+
+/**
+ * pdf-parse'ın varsayılan sayfa çözücüsü aynı satırdaki parçaları aralıksız birleştirir: KAP tablolarında hücreler
+ * "05.10.2026100.0000,024915,294118.313" olur, sayı kontrolü 118.313'ü bulamaz ve doğru haber reddedilir.
+ * Parçalar arasındaki yatay boşluk yazı boyutuna göre okunur: kelime aralığı → " ", hücre aralığı → " | ".
+ */
+export function joinPdfLine(items: PdfTextItem[]): string {
+  let text = "";
+  let lastY: number | undefined;
+  let lastEnd = 0;
+  for (const it of items) {
+    const x = it.transform[4] ?? 0;
+    const y = it.transform[5] ?? 0;
+    const size = Math.abs(it.transform[0] ?? 0) || 10;
+    if (lastY === undefined) text += it.str;
+    else if (lastY !== y) text += "\n" + it.str;
+    else {
+      const gap = x - lastEnd;
+      const sep = gap > size * 1.5 ? " | " : gap > size * 0.2 && !/\s$/.test(text) && !/^\s/.test(it.str) ? " " : "";
+      text += sep + it.str;
+    }
+    lastY = y;
+    lastEnd = x + it.width;
+  }
+  return text;
+}
+
 export async function pdfToText(bytes: Buffer): Promise<string> {
   const mod = await import("pdf-parse");
-  const pdfParse = (mod as unknown as { default?: (b: Buffer) => Promise<{ text: string }> }).default ?? (mod as unknown as (b: Buffer) => Promise<{ text: string }>);
-  const out = await pdfParse(bytes);
+  const pdfParse = (mod as unknown as { default?: PdfParse }).default ?? (mod as unknown as PdfParse);
+  const out = await pdfParse(bytes, {
+    pagerender: async (page) => joinPdfLine((await page.getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })).items),
+  });
   return out.text.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
