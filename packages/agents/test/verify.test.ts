@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { acceptIssues } from "../src/edit/semantic.js";
 import { checkFlash } from "../src/edit/rules.js";
@@ -47,4 +47,24 @@ describe.skipIf(!live)("anlam doğrulaması — canlı model (LIVE=1)", () => {
     const r = await check(sourceId, document, title, dek);
     expect(r.ok, r.reasons.join(" | ")).toBe(true);
   }, 60_000);
+
+  // Gerçek KAP bildirimleri (tablolu PDF metni) ve o gün yazılan haberler: fixtures/verify/README.md
+  const kapCases = readdirSync(new URL("../fixtures/verify/", import.meta.url)).filter((d) => d.startsWith("kap-"));
+  const kapFlags: string[] = [];
+  it.each(kapCases)("gerçek KAP: %s", async (d) => {
+    const base = new URL(`../fixtures/verify/${d}/`, import.meta.url);
+    const document = readFileSync(new URL("document.txt", base), "utf8");
+    const a = JSON.parse(readFileSync(new URL("article.json", base), "utf8")) as { title: string; dek: string; bodyMarkdown: string; keyFacts: string[] };
+    const { expect: kind, note } = JSON.parse(readFileSync(new URL("expected.json", base), "utf8")) as { expect: "temiz" | "hata"; note?: string };
+    const { verify } = await import("../src/verify.js");
+    const body = [a.bodyMarkdown, ...a.keyFacts.map((k) => `- ${k}`)].join("\n\n");
+    const v = await verify({ sourceId: "kap", documentText: document, title: a.title, dek: a.dek, body });
+    const r = acceptIssues(v.issues, `${a.title}\n${a.dek}\n${body}`, document);
+    if (kind === "hata") expect(r.ok, `yakalanmadı: ${note}`).toBe(false);
+    else if (!r.ok) kapFlags.push(`${d}: ${r.reasons.join(" | ")}`);
+  }, 90_000);
+  it("gerçek KAP: doğru haberlerde yanlış alarm en çok 1", () => {
+    if (kapFlags.length) console.log(`gerçek KAP yanlış alarmları (${kapFlags.length}):\n${kapFlags.join("\n")}`);
+    expect(kapFlags.length, kapFlags.join("\n")).toBeLessThanOrEqual(1);
+  });
 });

@@ -174,6 +174,16 @@ Her sorun için: claim = haberdeki ifade (haberden BİREBİR kopyala, en fazla b
 ya da ilgili kısım; kısaltırsan kelime atladığın yere "..." koy, hiçbir kelimeyi işaretsiz atlama; desteksiz için boş bırakabilirsin);
 explanation = tek kısa cümle.
 Haberde belgede geçmeyen, hesaplanmış bir sayı (fark, toplam, baz puan) sayı kontrolünde ayrıca yakalanır; onu bildirme.
+
+Tablolar ve KAP bildirimleri:
+- Belgede aynı satırdaki tablo hücreleri " | " ile ayrılır; sütun başlıkları üstteki satırlardadır ve hücreler başlık sırasıyla eşleşir.
+  Sütun eşleşmesinden emin değilsen (başlık sayısı hücre sayısını tutmuyor, başlıklar bölünmüş) o tablodan bulgu çıkarma.
+- Borsa İstanbul'da payın nominal değeri genellikle 1 TL'dir: "X TL nominal pay" ile "X adet pay" aynı miktardır; biri yerine ötekinin
+  kullanılması sorun değildir.
+- Pay geri alımı, şirketin kendi paylarını satın almasıdır: "geri aldı", "satın aldı", "geri alım kapsamında aldı" aynı yöndür.
+- Programdaki birikimli toplamın verilmesi ("geri alınan toplam pay ... adede ulaştı/yükseldi/çıktı") yön ya da dönem hatası değildir.
+- Zaman kipi farkı ("yapılacak" ↔ "yapılıyor") yalnızca belge işlemin yapılmadığını, ertelendiğini ya da iptal edildiğini açıkça
+  söylüyorsa sorundur.
 Sorun yoksa issues boş dizi. Emin değilsen bildirme: yanlış alarm doğru haberi geciktirir.
 Yalnızca istenen JSON şemasında yanıt ver.`;
 
