@@ -60,6 +60,7 @@ const filler = "Şirketimiz Örnek Enerji yatırımcılarını düzenli olarak b
   + "Bu bildirim Sermaye Piyasası Kurulu düzenlemeleri çerçevesinde hazırlanmış olup şirket internet sitesinde de yayımlanmaktadır. "
   + "Yönetim kurulumuz konuyla ilgili gelişmeleri yakından takip etmekte ve gerekli tüm adımları zamanında atmaktadır. ";
 const docs: Record<string, string> = {
+  "9000": `Örnek Enerji payların geri alınmasına ilişkin program kapsamında ilk işlemini yapmıştır. Şirketimiz 30.09.2026 tarihinde Borsa İstanbul'da toplam 25.000 TL nominal tutarlı pay geri almıştır. Geri alınan payların sermayeye oranı %0,00623 seviyesindedir. ${filler}`,
   "9001": `Örnek Enerji payların geri alınmasına ilişkin program kapsamında işlem yapmıştır. Şirketimiz 01.10.2026 tarihinde Borsa İstanbul'da toplam 48.313 TL nominal tutarlı pay geri almıştır. Geri alınan payların sermayeye oranı %0,01204 seviyesindedir. ${filler}`,
   "9002": `Örnek Enerji payların geri alınmasına ilişkin program kapsamında yeni işlem yapmıştır. Şirketimiz 02.10.2026 tarihinde Borsa İstanbul'da toplam 70.000 TL nominal tutarlı pay geri almıştır. Geri alınan payların sermayeye oranı %0,01744 seviyesindedir. ${filler}`,
   "9003": `Örnek Enerji rüzgar santrali yatırımı için Kuzey Türbin firmasıyla türbin tedarik sözleşmesi imzalamıştır. Sözleşme kapsamında toplam 12 adet türbin teslim alınacaktır. Teslimatların 2027 yılı içinde tamamlanması planlanmaktadır. ${filler}`,
@@ -160,5 +161,12 @@ describe("konu dizisi uçtan uca (KAP)", () => {
     expect(a6!.storyId).toBe(a5!.storyId); // 9005'in tarihi (3 Ekim) iki adaya denk geliyor: modelsiz bağlanmaz, 9006 → 9005 bağlanır
     expect((await byExt("9003")).storyId).toBeNull();
     expect(relateCalls).toEqual([2, 3, 2]);
+  });
+
+  it("eski bir olay sonradan işlenirse diziye girer ama arka planına sonraki gelişmeler sızmaz", async () => {
+    await run(ev("9000", "Payların Geri Alınmasına İlişkin Bildirim", "2026-09-30T15:00:00Z"));
+    const [a0, a1] = [await byExt("9000"), await byExt("9001")];
+    expect(a0.storyId).toBe(a1.storyId);
+    expect(writes.at(-1)!.background).toBeUndefined(); // 1 ve 2 Ekim haberleri bu belgeden sonra
   });
 });

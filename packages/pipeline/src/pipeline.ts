@@ -186,7 +186,7 @@ async function processClaimed(deps: PipelineDeps, adapter: SourceAdapter, row: R
     if (hit) Object.assign(plan, { joinArticle: hit, via: "model" as const });
     log("relate", { externalId: row.externalId, candidates: plan.candidates.length, match: r?.match, reason: r?.reason });
   }
-  const background = await backgroundFor(deps.db, plan, row.id);
+  const background = await backgroundFor(deps.db, plan, row.id, row.publishedAt);
   const contextText = formatBackground(background) || undefined;
 
   // verify (b): başlık–belge anahtar kelime örtüşmesi

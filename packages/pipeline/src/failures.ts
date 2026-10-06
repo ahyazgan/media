@@ -1,6 +1,7 @@
-import { and, eq, inArray, isNull, like, ne, notExists, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, like, ne, notExists, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { articles, jobFailures, rawEvents, type Db } from "@kaynak/db";
+import { rejectFromReview } from "./editorial.js";
 
 /** Üç denemeden sonra düşen işi kaydeder (süreç içi ve BullMQ modunda ortak). */
 export async function recordFailure(db: Db, f: { queue: string; rawEventId?: string; sourceId?: string; error: string; attempts?: number }) {
@@ -34,4 +35,26 @@ export async function requeueRejected(db: Db, opts: { sourceId?: string; dryRun?
   const ids = rows.map((r) => r.id);
   if (!opts.dryRun && ids.length) await db.update(rawEvents).set({ status: "new", claimedAt: null }).where(inArray(rawEvents.id, ids));
   return ids;
+}
+
+/**
+ * İncelemedeki taslakları yeniden işler (ör. onları incelemeye düşüren kural düzeltildiyse). Gerekçesi `reason` ile eşleşen taslak
+ * "sistem" adına reddedilir (kayıt ve sürüm kalır, inceleme kuyruğu kapanır), olay `new`e döner. Flaşı yayında, tam metni onay bekleyen
+ * haberde yalnızca bekleyen tam metin düşer; flaş yayında kalır ve yeniden işlemede kullanılır.
+ */
+export async function requeueReview(db: Db, opts: { reason: RegExp; since?: Date; sourceId?: string; dryRun?: boolean }): Promise<string[]> {
+  const rows = await db.select({ id: articles.id, rawEventId: articles.rawEventId, note: articles.editorNote }).from(articles)
+    .innerJoin(rawEvents, eq(rawEvents.id, articles.rawEventId))
+    .where(and(
+      or(eq(articles.status, "review"), and(eq(articles.isFlash, true), eq(articles.status, "published"), isNotNull(articles.pendingDraft))),
+      opts.since ? gte(articles.createdAt, opts.since) : undefined,
+      opts.sourceId ? eq(rawEvents.sourceId, opts.sourceId) : undefined,
+    ));
+  const hits = rows.filter((r) => r.rawEventId && opts.reason.test(r.note ?? ""));
+  if (opts.dryRun) return hits.map((r) => r.rawEventId!);
+  for (const r of hits) {
+    await rejectFromReview(db, r.id, { by: "sistem", reason: "kural düzeltmesi sonrası yeniden işleniyor" });
+    await db.update(rawEvents).set({ status: "new", claimedAt: null }).where(eq(rawEvents.id, r.rawEventId!));
+  }
+  return hits.map((r) => r.rawEventId!);
 }

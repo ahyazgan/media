@@ -24,7 +24,7 @@ export function acceptIssues(issues: VerifyIssue[], articleText: string, documen
     const claimOk = i.claim.trim().length > 0 && (quoteAppearsIn(i.claim, articleText) || looselyQuoted(i.claim, articleText));
     const evidenceOk = i.problem === "desteksiz" || (i.evidence.trim().length > 0 && (quoteAppearsIn(i.evidence, basis) || looselyQuoted(i.evidence, basis)));
     // Denetçi bazen bulguyu bildirip açıklamada geri alıyor ("…eş anlamlı olduğu için sorun yoktur"): prompt bunu yasaklıyor, burada da düşer
-    const selfRetracted = /sorun\s+(?:yok|değil)|eş\s+anlamlı|doğru\s+(?:yönde|aktarılmış|verilmiş)/iu.test(i.explanation);
+    const selfRetracted = /sorun\s+(?:yok|değil)|eş\s+anlamlı|doğru\s+(?:yönde|aktarılmış|verilmiş)|dilbilgisi|olgu\s+hatası\s+değil/iu.test(i.explanation);
     (claimOk && evidenceOk && !selfRetracted ? kept : dropped).push(i);
   }
   return {

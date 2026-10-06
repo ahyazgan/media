@@ -42,8 +42,9 @@ export interface EditOptions {
   contextText?: string;
 }
 
+/** Kelime sayısı: harf ya da rakam içermeyen parçalar (PDF tablo ayırıcısı "|", tek başına "-") sayılmaz */
 export function wordCount(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length;
+  return s.trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 }
 
 /**

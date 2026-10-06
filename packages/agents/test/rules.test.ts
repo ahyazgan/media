@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runEditRules, quoteAppearsIn, checkFlash } from "../src/edit/rules.js";
+import { runEditRules, quoteAppearsIn, checkFlash, wordCount } from "../src/edit/rules.js";
 import { formatBackground, writeUserMessage } from "../src/prompts.js";
 import type { WriteOutput } from "../src/schemas.js";
 
@@ -55,6 +55,10 @@ describe("runEditRules", () => {
     expect(m.indexOf("--- BELGE METNİ SONU ---")).toBeLessThan(m.indexOf("--- ARKA PLAN"));
     expect(m).toContain("[1] 2 Ekim 2026 — Önceki");
     expect(m).toContain("Olgular: Olgu 1 / Olgu 2");
+  });
+  it("kelime sayısı PDF tablo ayırıcısını ('|') ve tek başına tireyi saymaz (uzunluk alt sınırı şişmesin)", () => {
+    expect(wordCount("05.10.2026 | 100.000 | 0,02491 | 5,294 | 118.313 | -")).toBe(5);
+    expect(wordCount("Şirket pay geri aldı.")).toBe(4);
   });
   it("yasaklı kalıpta ilk denemede retry, ikincide review", () => {
     const bad = { ...good, bodyMarkdown: good.bodyMarkdown + " Uzmanlara göre etkisi büyük olabilir." };

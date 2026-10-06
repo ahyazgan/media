@@ -1,4 +1,4 @@
-import { and, arrayOverlaps, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, arrayOverlaps, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { type Db, articles, documents, rawEvents, stories } from "@kaynak/db";
 import type { BackgroundItem } from "@kaynak/agents";
 
@@ -149,11 +149,13 @@ export async function planStory(db: Db, p: { sourceId: string; title: string; pa
 }
 
 /** Yazara giden arka plan: dizinin yayındaki önceki haberleri (yeniden eskiye, en çok 3); dizi yoksa eşleşen aday haber. */
-export async function backgroundFor(db: Db, plan: StoryPlan, excludeRawEventId: string): Promise<BackgroundItem[]> {
+export async function backgroundFor(db: Db, plan: StoryPlan, excludeRawEventId: string, before: Date): Promise<BackgroundItem[]> {
   const storyId = plan.storyId ?? plan.joinArticle?.storyId ?? undefined;
   const conds = [
     inArray(articles.status, [...VISIBLE]),
     ne(articles.rawEventId, excludeRawEventId),
+    // Yalnızca bu belgeden ÖNCEKİ gelişmeler: eski bir olay yeniden işlenirken sonraki haberler arka plana sızmasın
+    lt(rawEvents.publishedAt, before),
     storyId && plan.joinArticle ? or(eq(articles.storyId, storyId), eq(articles.id, plan.joinArticle.articleId)) : storyId ? eq(articles.storyId, storyId) : plan.joinArticle ? eq(articles.id, plan.joinArticle.articleId) : undefined,
   ];
   if (!conds[2]) return [];

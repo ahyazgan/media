@@ -6,7 +6,7 @@ import type { RawEvent, SourceAdapter } from "@kaynak/sources";
 import type { ClassifyOutput, FlashOutput, WriteOutput } from "@kaynak/agents";
 import { ingestEvents, processEvent, type Agents, type PipelineDeps } from "./pipeline.js";
 import { publishFromReview, rejectFromReview } from "./editorial.js";
-import { requeueRejected } from "./failures.js";
+import { requeueRejected, requeueReview } from "./failures.js";
 import { MemoryStore } from "./storage.js";
 
 const DOC = `Para Politikası Kurulu (Kurul), politika faizi olan bir hafta vadeli repo ihale faiz oranını yüzde 36,5'ten yüzde 35'e indirmiştir.
@@ -167,6 +167,24 @@ describe("flaş → tam metin (aynı makale)", () => {
     expect(arts.map((a) => a.status).sort()).toEqual(["published", "rejected"]);
     expect(arts.find((a) => a.status === "published")).toMatchObject({ isFlash: false, title: goodFull.title });
     expect(await requeueRejected(h.db, { sourceId: "tcmb" })).not.toContain(rawId);
+  });
+
+  it("requeueReview: gerekçesi eşleşen inceleme taslağı sistemce reddedilir, kuyruk kapanır, olay yeniden işlenir; eşleşmeyen dokunulmaz", async () => {
+    const a = await run({ importance: 5, threshold: 4 }); // flaş yayında, tam metin önem eşiği yüzünden onay bekliyor
+    const b = await run({ importance: 3, threshold: 6, full: { ...goodFull, title: "x".repeat(75) } }); // başlık sınırı → review
+    expect([a.outcome.kind, b.outcome.kind]).toEqual(["review", "review"]);
+    const rawA = a.arts[0]!.rawEventId!, rawB = b.arts[0]!.rawEventId!;
+    expect(await requeueReview(h.db, { reason: /başlık:/u, sourceId: "tcmb", dryRun: true })).toEqual([rawB]);
+    expect(await requeueReview(h.db, { reason: /başlık:/u, sourceId: "tcmb" })).toEqual([rawB]);
+    const [oldB] = await h.db.select().from(articles).where(eq(articles.id, b.arts[0]!.id));
+    expect(oldB).toMatchObject({ status: "rejected" });
+    expect((await h.db.select().from(reviewQueue).where(eq(reviewQueue.articleId, oldB!.id))).every((q) => q.resolvedAt)).toBe(true);
+    expect((await h.db.select().from(rawEvents).where(eq(rawEvents.id, rawB)))[0]!.status).toBe("new");
+    expect((await h.db.select().from(rawEvents).where(eq(rawEvents.id, rawA)))[0]!.status).toBe("processed");
+    // Flaşlı haber: bekleyen tam metin düşer, flaş yayında kalır
+    expect(await requeueReview(h.db, { reason: /importance/u, sourceId: "tcmb" })).toContain(rawA);
+    const [flashA] = await h.db.select().from(articles).where(eq(articles.id, a.arts[0]!.id));
+    expect(flashA).toMatchObject({ status: "published", isFlash: true, pendingDraft: null });
   });
 
   it("önem eşiğin altındaysa flaş üretilmez", async () => {
