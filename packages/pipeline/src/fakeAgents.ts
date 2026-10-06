@@ -45,12 +45,14 @@ export const fakeAgents: Agents = {
       summaryHint: "Sahte ajan: belgeden özet.",
     };
   },
-  async write({ sourceId, title, documentText, sourceName }) {
+  async write({ sourceId, title, documentText, sourceName, background }) {
     const sentences = documentText.split(/(?<=\.)\s+/).map((s) => s.replace(/\s+/g, " ").trim()).filter((s) => s.length > 40 && s.length < 400);
     const picked = sentences.slice(0, 8);
     const body = [`${sourceName} kaynaklı belge yayımlandı: ${title}.`, ...picked].join("\n\n");
     // 120 kelime altına düşmesin diye belge cümleleri tekrarlanmaz; yeterli değilse tamamı eklenir
-    const bodyMarkdown = body.split(/\s+/).length >= 120 ? body : [body, ...sentences.slice(8, 20)].join("\n\n");
+    const main = body.split(/\s+/).length >= 120 ? body : [body, ...sentences.slice(8, 20)].join("\n\n");
+    // Arka plan verildiyse son paragrafta, tarihiyle (canlı yazarın 15. kuralı gibi)
+    const bodyMarkdown = background?.[0] ? `${main}\n\n${background[0].date} tarihli haberimizde: ${background[0].dek}` : main;
     const firstQuote = picked[0] ?? sentences[0] ?? documentText.slice(0, 120);
     return {
       title: title.length > 70 ? title.slice(0, 67).replace(/\s+\S*$/, "") : title,
@@ -60,6 +62,10 @@ export const fakeAgents: Agents = {
       tickers: [], tags: sourceId === "kap" ? ["kap", "borsa"] : sourceId === "tcmb" || sourceId === "tuik" ? [sourceId, "makro"] : ["spk", "bddk", "epdk", "botas"].includes(sourceId) ? [sourceId, "duyuru"] : ["resmi-gazete", "mevzuat"],
       numbersUsed: extractNumbers(bodyMarkdown),
     };
+  },
+  /** Konu eşleştirme: sahte ajan bağ kurmaz (kuru çalıştırmada yanlış dizi oluşmasın); diziler yalnızca kuralla kurulur */
+  async relate() {
+    return { match: 0, reason: "sahte ajan: model yok" };
   },
   /** Flaş: başlık + belgenin ilk anlamlı cümlesi (belgeden kopya → sayı kontrolünden geçer) */
   async flash({ title, textHead }) {

@@ -28,6 +28,8 @@ export const rawEvents = pgTable("raw_events", {
   payloadHash: text("payload_hash").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   status: rawEventStatus("status").notNull().default("new"),
+  /** İşleyen sürecin sahiplenme zamanı: aynı olay iki kez işlenmesin (izleme döngüsü + bekleyen süpürmesi); hata olursa boşaltılır */
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("raw_events_dedupe").on(t.sourceId, t.externalId, t.payloadHash),
@@ -48,6 +50,19 @@ export const documents = pgTable("documents", {
 export type KeyFact = { text: string; quoteFromSource: string };
 /** Flaş yayındayken onay bekleyen tam metin (editör onaylayınca flaşın yerine geçer) */
 export type PendingDraft = { title: string; dek: string; bodyMarkdown: string; keyFacts: KeyFact[]; tags: string[]; tickers: string[] };
+
+/**
+ * Konu dizisi: aynı olayın gelişmeleri (bir pay geri alım programının günlük bildirimleri, bir sermaye artırımının adımları,
+ * bir yönetmeliğin değişiklikleri, aylık TÜFE serisi). Her gelişme kendi belgesine dayanan ayrı haberdir; dizi onları birbirine bağlar.
+ * key: kuralla bulunan dizi anahtarı ("kap:OSMEN:pay-geri-alim", "tuik:tuketici-fiyat-endeksi", "mevzuat:…"); model eşleştirmesiyle
+ * kurulan dizide boş olabilir. lastAt: son gelişmenin kaynak yayın zamanı (anahtar eşleşmesi bu zamana göre süre sınırına bakar).
+ */
+export const stories = pgTable("stories", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key"),
+  lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("stories_key_last").on(t.key, t.lastAt)]);
 
 export const articles = pgTable("articles", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -71,7 +86,10 @@ export const articles = pgTable("articles", {
   /** Flaş: belgeden tek cümlelik ilk haber; tam metin hazırlanınca aynı makale (aynı adres) güncellenir */
   isFlash: boolean("is_flash").notNull().default(false),
   pendingDraft: jsonb("pending_draft").$type<PendingDraft>(),
+  /** Konu dizisi (aynı olayın önceki/sonraki gelişmeleri); yoksa tek başına haber */
+  storyId: text("story_id").references(() => stories.id),
 }, (t) => [
+  index("articles_story").on(t.storyId),
   uniqueIndex("articles_slug").on(t.slug),
   index("articles_status_published").on(t.status, t.publishedAt),
   index("articles_category").on(t.category),
@@ -269,6 +287,7 @@ export type NewRawEvent = typeof rawEvents.$inferInsert;
 export type DocumentRow = typeof documents.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type NewArticle = typeof articles.$inferInsert;
+export type Story = typeof stories.$inferSelect;
 export type Company = typeof companies.$inferSelect;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;

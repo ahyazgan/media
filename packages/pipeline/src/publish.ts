@@ -2,7 +2,8 @@ import type { Article, Db } from "@kaynak/db";
 import type { Env } from "./env.js";
 import { sendPushForArticle, type PushSender } from "./push.js";
 import { postArticleToX } from "./x.js";
-import { distributionLog, type Db as _Db } from "@kaynak/db";
+import { articles, distributionLog, type Db as _Db } from "@kaynak/db";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 
 export interface PublishHooks {
   fetchImpl?: typeof fetch;
@@ -21,7 +22,7 @@ export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {
   const fetchImpl = h.fetchImpl ?? fetch;
   return async (a: Article, ctx?: { sourceId: string }): Promise<void> => {
     const jobs: Promise<unknown>[] = [
-      revalidate(env, a, fetchImpl, ctx?.sourceId),
+      storySiblingPaths(h.db, a).then((extra) => revalidate(env, a, fetchImpl, ctx?.sourceId, extra)),
       telegram(env, a, fetchImpl).then((sent) => { if (sent !== undefined && h.db) return logTelegram(h.db, a, sent); }),
       indexNow(env, a, fetchImpl),
     ];
@@ -40,7 +41,7 @@ export function makeOnPublished(env: Env, hooks: PublishHooks | typeof fetch = {
 export function makeOnUpdated(env: Env, hooks: PublishHooks | typeof fetch = {}) {
   const h: PublishHooks = typeof hooks === "function" ? { fetchImpl: hooks } : hooks;
   const fetchImpl = h.fetchImpl ?? fetch;
-  return async (a: Article, ctx?: { sourceId: string }): Promise<void> => { await revalidate(env, a, fetchImpl, ctx?.sourceId); };
+  return async (a: Article, ctx?: { sourceId: string }): Promise<void> => { await revalidate(env, a, fetchImpl, ctx?.sourceId, await storySiblingPaths(h.db, a)); };
 }
 
 /** FLASH_SOURCES / FLASH_MIN_IMPORTANCE → pipeline flaş ayarı (boş liste = kapalı) */
@@ -60,12 +61,28 @@ export function pathsFor(a: Article, sourceId?: string): string[] {
   return paths;
 }
 
-async function revalidate(env: Env, a: Article, f: typeof fetch, sourceId?: string) {
+/** Konu dizisindeki diğer haberlerin sayfaları: zaman çizelgelerine yeni gelişme eklendi (dizi bağı yayından hemen önce kurulur; DB'den okunur) */
+async function storySiblingPaths(db: Db | undefined, a: Article): Promise<string[]> {
+  if (!db) return [];
+  try {
+    const [row] = await db.select({ storyId: articles.storyId }).from(articles).where(eq(articles.id, a.id)).limit(1);
+    if (!row?.storyId) return [];
+    const sibs = await db.select({ slug: articles.slug }).from(articles)
+      .where(and(eq(articles.storyId, row.storyId), ne(articles.id, a.id), inArray(articles.status, ["published", "corrected"])))
+      .orderBy(desc(articles.createdAt)).limit(10);
+    return sibs.map((x) => `/haber/${x.slug}`);
+  } catch (e) {
+    console.warn("[publish] story paths failed:", (e as Error).message);
+    return [];
+  }
+}
+
+async function revalidate(env: Env, a: Article, f: typeof fetch, sourceId?: string, extraPaths: string[] = []) {
   if (!env.REVALIDATE_SECRET) return;
   await f(`${env.SITE_URL}/api/revalidate`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-revalidate-secret": env.REVALIDATE_SECRET },
-    body: JSON.stringify({ paths: pathsFor(a, sourceId) }),
+    body: JSON.stringify({ paths: [...pathsFor(a, sourceId), ...extraPaths] }),
   }).catch((e) => console.warn("[publish] revalidate failed:", (e as Error).message));
 }
 

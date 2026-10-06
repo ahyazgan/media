@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
+import { and, arrayOverlaps, asc, desc, eq, gte, ilike, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { articles, articleVersions, calendarEvents, companies, companyEvents, documents, rawEvents, type Article } from "@kaynak/db";
 import { tickerItems } from "@kaynak/pipeline/market";
 import { getDb } from "./db";
@@ -27,11 +27,31 @@ export async function articleBySlug(slug: string) {
   return { article: a, document: doc, event: ev, versions };
 }
 
+/** İlgili haberler: önce aynı şirketin, sonra aynı kategorinin son haberleri; konu dizisindekiler (zaman çizelgesinde) hariç. */
 export async function relatedArticles(a: Article, limit = 5): Promise<Article[]> {
   const { db } = await getDb();
-  return db.select().from(articles)
-    .where(and(live(), eq(articles.category, a.category), sql`${articles.id} <> ${a.id}`))
-    .orderBy(desc(articles.publishedAt)).limit(limit);
+  const base = and(live(), sql`${articles.id} <> ${a.id}`, a.storyId ? or(isNull(articles.storyId), ne(articles.storyId, a.storyId)) : undefined);
+  const byCompany = a.tickers.length
+    ? await db.select().from(articles).where(and(base, arrayOverlaps(articles.tickers, a.tickers))).orderBy(desc(articles.publishedAt)).limit(limit)
+    : [];
+  if (byCompany.length >= limit) return byCompany;
+  const rest = await db.select().from(articles)
+    .where(and(base, eq(articles.category, a.category), byCompany.length ? notInArray(articles.id, byCompany.map((x) => x.id)) : undefined))
+    .orderBy(desc(articles.publishedAt)).limit(limit - byCompany.length);
+  return [...byCompany, ...rest];
+}
+
+export interface StoryItem { id: string; slug: string; title: string; eventAt: Date }
+
+/** Konu dizisinin gelişmeleri (yeniden eskiye; kaynak belgenin yayın zamanına göre). Tek haberlik dizi gösterilmez. */
+export async function storyTimeline(a: Article, limit = 10): Promise<StoryItem[]> {
+  if (!a.storyId) return [];
+  const { db } = await getDb();
+  const rows = await db.select({ id: articles.id, slug: articles.slug, title: articles.title, eventAt: rawEvents.publishedAt })
+    .from(articles).innerJoin(rawEvents, eq(rawEvents.id, articles.rawEventId))
+    .where(and(eq(articles.storyId, a.storyId), or(live(), eq(articles.id, a.id))))
+    .orderBy(desc(rawEvents.publishedAt)).limit(limit);
+  return rows.length > 1 ? rows : [];
 }
 
 export interface GazetteRow {

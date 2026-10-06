@@ -41,6 +41,17 @@
 .k-correction__hist ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .k-correction__hist time { color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* Konu dizisi: aynı olayın gelişmeleri (yeniden eskiye, dikey çizgi üzerinde) */
+.k-story { margin: 8px 0 24px; }
+.k-story__list { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+.k-story__i { position: relative; display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 8px 0; font-size: 15px; }
+.k-story__i::before { content: ""; position: absolute; left: -20px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--ground); border: 2px solid var(--muted); }
+.k-story__i--current::before { background: var(--accent); border-color: var(--accent); }
+.k-story__i--current .k-story__t { font-weight: 700; }
+.k-story__time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; padding-top: 1px; }
+.k-story__badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 3px; background: var(--tint); color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 2px; }
+@media (max-width: 640px) { .k-story__i { grid-template-columns: 1fr; gap: 2px; } }
+
 /* Admin */
 .k-admin { display: grid; gap: 20px; }
 .k-admin__nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 8px; font-size: 14px; font-weight: 600; }

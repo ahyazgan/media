@@ -79,7 +79,8 @@ async function processOne(rawEventId: string) {
 }
 /**
  * Bekleyen süpürme: status=new kalan olaylar (önceki çalıştırmada düşen, admin'in "yeniden dene" dediği, watch sonrası işlenemeyen).
- * Süreç içi modda burada işlenir; BullMQ modunda process kuyruğuna eklenir (jobId tekil olduğundan çift iş olmaz).
+ * Süreç içi modda burada işlenir; BullMQ modunda process kuyruğuna eklenir. İzleme döngüsü aynı olayı o an işliyor olabilir
+ * (status hâlâ new): çift işlemeyi processEvent'in satır sahiplenmesi (raw_events.claimed_at) önler.
  */
 async function pendingIds(limit = 50): Promise<string[]> {
   const rows = await handle.db.select({ id: rawEvents.id, sourceId: rawEvents.sourceId }).from(rawEvents).where(eq(rawEvents.status, "new")).limit(limit);

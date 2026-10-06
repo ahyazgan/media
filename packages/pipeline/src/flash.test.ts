@@ -80,6 +80,42 @@ describe("flaş → tam metin (aynı makale)", () => {
     expect(calls.published).toHaveLength(0);
   });
 
+  it("aynı olay aynı anda iki kez işlenmeye çalışılırsa (izleme + bekleyen süpürmesi) yalnızca biri işler: tek flaş, tek dağıtım", async () => {
+    const ev: RawEvent = { sourceId: "tcmb", externalId: `duy-flash-${++n}`, title: "Faiz Oranlarına İlişkin Basın Duyurusu (Para Politikası Kurulu)", url: `https://www.tcmb.gov.tr/x/${n}`, publishedAt: new Date(), payloadHash: `h${n}`, payload: {} };
+    const [row] = await ingestEvents(h.db, [ev]);
+    const published: Article[] = [];
+    const agents: Agents = { classify: async () => cls(5), write: async () => goodFull, flash: async () => goodFlash };
+    const adapter: SourceAdapter = { id: "tcmb", official: true, schedule: () => ({ timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600 }), fetchNew: async () => [], fetchDocument: async (e) => ({ url: e.url, mime: "text/html", bytes: Buffer.from(`<html><body><pre>${DOC}</pre></body></html>`) }) };
+    const deps: PipelineDeps = { db: h.db, agents, store: new MemoryStore(), reviewThreshold: 6, flash: { sources: ["tcmb"], minImportance: 4 }, onPublished: async (a) => { published.push(a); }, onUpdated: async () => {} };
+    const outcomes = await Promise.all([processEvent(deps, adapter, row!), processEvent(deps, adapter, row!)]);
+    expect(outcomes.map((o) => o.kind).sort()).toEqual(["published", "skipped"]);
+    expect(await h.db.select().from(articles).where(eq(articles.rawEventId, row!.id))).toHaveLength(1);
+    expect(published).toHaveLength(1);
+    // İşlenmiş olay tekrar alınmaz
+    expect((await processEvent(deps, adapter, row!)).kind).toBe("skipped");
+  });
+
+  it("flaş yayımlandıktan sonra yazım düşerse sahiplenme boşalır; yeniden deneme aynı flaşı kullanır (ikinci flaş ve dağıtım yok)", async () => {
+    const ev: RawEvent = { sourceId: "tcmb", externalId: `duy-flash-${++n}`, title: "Faiz Oranlarına İlişkin Basın Duyurusu (Para Politikası Kurulu)", url: `https://www.tcmb.gov.tr/x/${n}`, publishedAt: new Date(), payloadHash: `h${n}`, payload: {} };
+    const [row] = await ingestEvents(h.db, [ev]);
+    const published: Article[] = [];
+    let writes = 0;
+    const agents: Agents = {
+      classify: async () => cls(5), flash: async () => goodFlash,
+      write: async () => { if (++writes === 1) throw new Error("API 529 overloaded"); return goodFull; },
+    };
+    const adapter: SourceAdapter = { id: "tcmb", official: true, schedule: () => ({ timezone: "Europe/Istanbul", windows: [], defaultEverySeconds: 600 }), fetchNew: async () => [], fetchDocument: async (e) => ({ url: e.url, mime: "text/html", bytes: Buffer.from(`<html><body><pre>${DOC}</pre></body></html>`) }) };
+    const deps: PipelineDeps = { db: h.db, agents, store: new MemoryStore(), reviewThreshold: 6, flash: { sources: ["tcmb"], minImportance: 4 }, onPublished: async (a) => { published.push(a); }, onUpdated: async () => {} };
+    await expect(processEvent(deps, adapter, row!)).rejects.toThrow(/529/);
+    const [mid] = await h.db.select().from(rawEvents).where(eq(rawEvents.id, row!.id));
+    expect(mid!.claimedAt).toBeNull();
+    expect((await processEvent(deps, adapter, row!)).kind).toBe("published");
+    const arts = await h.db.select().from(articles).where(eq(articles.rawEventId, row!.id));
+    expect(arts).toHaveLength(1);
+    expect(arts[0]).toMatchObject({ isFlash: false, title: goodFull.title });
+    expect(published.map((a) => a.isFlash)).toEqual([true]);
+  });
+
   it("önem eşiğin altındaysa flaş üretilmez", async () => {
     const { arts, calls } = await run({ importance: 3, threshold: 6 });
     expect(arts).toHaveLength(1);

@@ -6,6 +6,7 @@ doğrulanması gereken işlerdir. Sırasıyla ilerleyin; her madde tek başına 
 ## 1. Altyapı ve gizli anahtarlar (`.env`)
 
 - [ ] **Veritabanı:** üretimde `DATABASE_URL=postgres://…` (PGlite yalnızca geliştirme; tek süreç kilidi vardır). `pnpm db:migrate`.
+  Konu dizileri gelmeden önce yayımlanmış haberler varsa bir kez: `pnpm pipeline:run -- --backfill-stories` (model çağırmaz).
 - [ ] **Redis:** `REDIS_URL` → worker BullMQ moduna geçer (3 deneme, `dead` kuyruğu, tekrarlayan işler).
 - [ ] **Model anahtarı:** `ANTHROPIC_API_KEY`; `MODEL_CLASSIFY` / `MODEL_WRITE` kimliklerini docs.claude.com'daki güncel listeyle doğrulayın.
 - [ ] **Site:** `SITE_URL` (HTTPS), `REVALIDATE_SECRET` (rastgele), `BOT_CONTACT_EMAIL` (robots/UA'da görünür).

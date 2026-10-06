@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { renderArticleMarkdown } from "@/lib/markdown";
 import { ArticleListItem, CompanyCard, KeyFacts, SourceBox, categoryLabel } from "@kaynak/ui";
 import { Ad } from "@/components/Ad";
-import { articleBySlug, companiesByCodes, relatedArticles } from "@/lib/queries";
+import { articleBySlug, companiesByCodes, relatedArticles, storyTimeline } from "@/lib/queries";
 import { dateLabel, dateTimeLabel, sourceLabel } from "@/lib/format";
 
 export const revalidate = 3600; // publish'te /api/revalidate ile anında yenilenir
@@ -30,7 +30,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const r = await articleBySlug(slug);
   if (!r) notFound();
   const { article: a, document: doc, event: ev, versions } = r;
-  const [related, cos] = await Promise.all([relatedArticles(a), companiesByCodes(a.tickers)]);
+  const [related, cos, story] = await Promise.all([relatedArticles(a), companiesByCodes(a.tickers), storyTimeline(a)]);
   const html = renderArticleMarkdown(a.bodyMarkdown);
   const paragraphs = html.split(/(?<=<\/p>)/);
   const before = paragraphs.slice(0, 3).join(""), after = paragraphs.slice(3).join("");
@@ -96,6 +96,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           url={a.sourceUrl} excerpt={doc ? doc.textContent.replace(/\s+/g, " ").slice(0, 280) + "…" : undefined}
         />
         <KeyFacts facts={a.keyFacts} />
+        {story.length > 0 && (
+          <section className="k-story" aria-labelledby="k-story-h">
+            <div className="k-section-h"><h2 id="k-story-h">Bu konudaki gelişmeler</h2><span className="k-muted" style={{ fontSize: 13 }}>{story.length} haber</span></div>
+            <ol className="k-story__list">
+              {story.map((s) => (
+                <li key={s.id} className={`k-story__i${s.id === a.id ? " k-story__i--current" : ""}`}>
+                  <time className="k-story__time" dateTime={s.eventAt.toISOString()}>{dateTimeLabel(s.eventAt)}</time>
+                  {s.id === a.id
+                    ? <span className="k-story__t" aria-current="page">{s.title} <span className="k-story__badge">Bu haber</span></span>
+                    : <Link href={`/haber/${s.slug}`} className="k-story__t">{s.title}</Link>}
+                </li>
+              ))}
+            </ol>
+            <p className="k-muted" style={{ fontSize: 12, margin: "8px 0 0" }}>Her gelişme kendi resmi belgesine dayanır; saatler belgenin yayımlandığı zamandır.</p>
+          </section>
+        )}
         {cos.map((c) => <CompanyCard key={c.kapCode} c={c} LinkComponent={NextLink} />)}
         {related.length > 0 && (
           <section>

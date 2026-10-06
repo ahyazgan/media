@@ -35,6 +35,11 @@ export interface EditOptions {
   groundingExtra?: string;
   /** Uzunluk alt sınırı bu metnin kelime sayısından hesaplanır (kaynağın sabit kalıplarından arınmış belge); yoksa belge */
   lengthBasisText?: string;
+  /**
+   * Yazara verilen arka plan (daha önce yayımlanmış, belgeye dayalı haberler; formatBackground çıktısı). Gövdedeki sayılar buradan da
+   * doğrulanabilir; başlık, dek, ilk paragraf ve keyFacts yalnızca belgeden (arka plan sayısı oraya taşınmışsa → REVIEW).
+   */
+  contextText?: string;
 }
 
 export function wordCount(s: string): number {
@@ -45,7 +50,7 @@ export function wordCount(s: string): number {
  * Şartname 5.4 — sırayla:
  * 1) numericGroundingCheck → geçmeyen sayı varsa REJECT
  * 2) bannedPhrases → ilk denemede RETRY, tekrar eşleşirse REVIEW
- * 3) uzunluk / başlık sınırı / boş keyFacts → REVIEW
+ * 3) arka plan sayısı başlık/dek/ilk paragraf/keyFacts'te, uzunluk / başlık sınırı / boş keyFacts → REVIEW
  * 4) importance >= threshold → REVIEW, aksi halde PUBLISH
  */
 export function runEditRules(article: WriteOutput, documentText: string, opts: EditOptions): EditResult {
@@ -57,8 +62,8 @@ export function runEditRules(article: WriteOutput, documentText: string, opts: E
   const maxTitle = opts.maxTitleChars ?? 70;
 
   const articleText = [article.title, article.dek, article.bodyMarkdown, ...article.keyFacts.map((k) => k.text)].join("\n");
-  const grounding = numericGroundingCheck(article.numbersUsed, articleText, opts.groundingExtra ? `${documentText}
-${opts.groundingExtra}` : documentText);
+  const docBasis = opts.groundingExtra ? `${documentText}\n${opts.groundingExtra}` : documentText;
+  const grounding = numericGroundingCheck(article.numbersUsed, articleText, opts.contextText ? `${docBasis}\n${opts.contextText}` : docBasis);
   const allHits = findBanned({ title: article.title, dek: article.dek, body: article.bodyMarkdown, keyFacts: article.keyFacts.map((k) => k.text).join("\n") });
   const docLower = documentText.toLocaleLowerCase("tr");
   const isAttributed = (b: BannedHit) => b.id in SOURCE_ATTRIBUTABLE && docLower.includes(SOURCE_ATTRIBUTABLE[b.id]!);
@@ -75,6 +80,11 @@ ${opts.groundingExtra}` : documentText);
     return { decision: opts.isRetry ? "review" : "retry", reasons, grounding, banned, sourceAttributed };
   }
 
+  if (opts.contextText) {
+    const lead = [article.title, article.dek, article.bodyMarkdown.trim().split(/\n\s*\n/)[0] ?? "", ...article.keyFacts.map((k) => k.text)].join("\n");
+    const leadCheck = numericGroundingCheck([], lead, docBasis);
+    if (!leadCheck.ok) reasons.push(`arka plan: başlık/dek/ilk paragraf/keyFacts'te belgede olmayan sayı: ${leadCheck.missing.join(", ")}`);
+  }
   const words = wordCount(article.bodyMarkdown);
   if (words < minWords || words > maxWords) reasons.push(`uzunluk: ${words} kelime (izin: ${minWords}–${maxWords})`);
   if (article.title.length > maxTitle) reasons.push(`başlık: ${article.title.length} karakter (> ${maxTitle})`);

@@ -1,3 +1,5 @@
+import type { BackgroundItem, RelateInput } from "./schemas.js";
+
 export const CLASSIFY_SYSTEM = `Sen Türkiye ekonomi haberciliği için çalışan bir sınıflandırma asistanısın.
 Sana resmi bir kaynaktan (Resmi Gazete, KAP, TCMB, TÜİK) gelen bir bildirimin başlığı ve belge metninin başı verilir.
 Görevin: bildirimi kategorilendirmek, önemini puanlamak, geçen kurum/şirket adlarını çıkarmak ve haber değeri olup olmadığına karar vermek.
@@ -58,13 +60,32 @@ Kurallar (istisnasız):
 12. Dil: sade, resmi ama okunur Türkçe. Edilgen çatıdan kaçın; özneyi (Bakanlık, Kurul, Banka) kullan.
 14. TCMB/TÜİK bültenlerinde ilk cümle veriyi verir (gösterge, dönem, oran); "yükseldi/geriledi" yalnızca belgedeki yönle. Kurumun kendi tahminlerini ("Enflasyon Raporu'nda yıl sonu tahmini yüzde 26") kuruma atfederek aktarabilirsin; kendi beklentini ekleme, piyasa tepkisi yazma.
 13. KAP bildirimlerinde ilk cümlede şirketin adını ve parantez içinde borsa kodunu ver ("Örnek Enerji (ORNEK) ..."); kodu mesajdaki "Borsa kodu" satırından al, satır yoksa kod yazma. Finansal raporlarda yalnızca belgedeki tutar ve yüzdeleri aktar; "güçlü", "rekor", "zayıf" gibi nitelemeler ve pay fiyatına etki yorumu yasak. Sözleşme ve ihalelerde karşı tarafı, tutarı ve süreyi belgede yazıldığı gibi ver.
+15. Mesajda "ARKA PLAN" bölümü varsa: bunlar aynı konuda daha önce yayımladığımız, kendi resmi belgesine dayanan haberlerdir.
+    Yalnızca bu belgeyle doğrudan ilgiliyse (aynı programın önceki işlemi, aynı sürecin önceki adımı, aynı serinin önceki dönemi) kullan:
+    gövdenin SON paragrafında, en fazla iki cümleyle ve tarihiyle ("Şirket 2 Ekim'de 70.000 TL nominal pay geri almıştı.").
+    Başlık, dek, ilk paragraf ve keyFacts YALNIZCA bu belgeden gelir; arka plandaki sayıları oralara taşıma.
+    Arka plandaki sayıları ve tarihleri değiştirmeden aktar; iki haberin sayılarını toplama, fark ya da oran hesaplama.
+    "İlk kez", "yine", "art arda" gibi sonuç çıkarmalar ve yorum yok. İlgisizse arka planı hiç kullanma.
 
 Yalnızca istenen JSON şemasında yanıt ver.`;
+
+/** Arka plan bloğu: yazara giden metin ile sayı kontrolüne eklenen metin aynıdır (ikisi ayrışmasın diye tek yerde) */
+export function formatBackground(items: BackgroundItem[] | undefined): string {
+  if (!items?.length) return "";
+  const lines = items.map((b, i) => [
+    `[${i + 1}] ${b.date} — ${b.title}`,
+    `    Spot: ${b.dek}`,
+    ...(b.facts.length ? [`    Olgular: ${b.facts.join(" / ")}`] : []),
+  ].join("\n"));
+  return `--- ARKA PLAN (aynı konuda daha önce yayımladığımız haberler, yeniden eskiye) ---\n${lines.join("\n")}\n--- ARKA PLAN SONU ---`;
+}
 
 export function writeUserMessage(p: {
   sourceName: string; sourceUrl: string; title: string; publishedAt: string;
   summaryHint: string; category: string; documentText: string; avoidPhrases?: string[]; stockCodes?: string[];
+  background?: BackgroundItem[];
 }): string {
+  const bg = formatBackground(p.background);
   const avoid = p.avoidPhrases?.length
     ? `\n\nÖNCEKİ DENEME ŞU YASAKLI İFADELER YÜZÜNDEN REDDEDİLDİ, KULLANMA: ${p.avoidPhrases.map((s) => `"${s}"`).join(", ")}`
     : "";
@@ -77,7 +98,7 @@ Editör notu: ${p.summaryHint}${avoid}
 
 --- BELGE METNİ BAŞLANGICI ---
 ${p.documentText}
---- BELGE METNİ SONU ---`;
+--- BELGE METNİ SONU ---${bg ? `\n\n${bg}` : ""}`;
 }
 
 export const FLASH_SYSTEM = `Sen bir haber ajansının flaş masasındasın. Resmi bir belgenin (KAP, TCMB, TÜİK, Resmi Gazete) yayımlandığı saniyelerde,
@@ -97,3 +118,29 @@ Kurallar (istisnasız):
 6. numbersUsed: headline ve sentence'ta kullandığın HER sayıyı belgede geçtiği biçimiyle listele.
 
 Yalnızca istenen JSON şemasında yanıt ver.`;
+
+export const RELATE_SYSTEM = `Sen bir ekonomi haber masasında konu takibi yapan asistansın. Sana resmi bir kaynaktan yeni gelen bir bildirim ve
+aynı şirketle ilgili daha önce yayımladığımız haberlerin numaralı listesi verilir.
+
+Görevin: yeni bildirim, listedeki haberlerden birinin anlattığı AYNI OLAYIN devamı, sonucu, güncellemesi ya da düzeltmesi mi?
+Aynı olay örnekleri: aynı sözleşmenin imzalanması ve onaylanması; aynı ihaleye teklif ve ihalenin sonucu; aynı sermaye artırımının
+yönetim kurulu kararı, SPK onayı ve tamamlanması; aynı davanın açılması ve kararı; aynı birleşmenin adımları; aynı pay geri alım
+programının işlemleri; aynı yatırımın duyurulması ve devreye alınması; bir atamanın ardından aynı görevden ayrılma.
+
+Aynı olay DEĞİL: aynı şirketin başka bir sözleşmesi, başka bir ihalesi, başka bir davası; yalnızca konu türü benzeyen ayrı olaylar.
+Emin değilsen bağlama: match = 0. Birden çok aday uyuyorsa en yeni olanı seç.
+
+match: uyan adayın sıra numarası (1, 2, …) ya da 0. reason: tek kısa cümle.
+Yalnızca istenen JSON şemasında yanıt ver.`;
+
+export function relateUserMessage(p: RelateInput): string {
+  const list = p.candidates.map((c, i) => `${i + 1}) ${c.date} — ${c.title}\n   ${c.dek}`).join("\n");
+  return `Kaynak: ${p.sourceId}
+Yeni bildirim: ${p.title}
+
+Belge başı:
+${p.textHead.slice(0, 1500)}
+
+Daha önce yayımlanan haberler:
+${list}`;
+}

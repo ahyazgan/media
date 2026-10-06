@@ -25,6 +25,9 @@ pnpm db:generate                          # şema değişince migration üret (p
 - `packages/pipeline`: `processEvent` = belge indir/sakla → classify → şirket bağlama → verify → write → edit → publish|review|reject; sürüm
   anlık görüntüsü; `publish.ts` kancası (revalidate, Telegram, X, push, IndexNow); takvim, bülten, e-posta, push, editoryal işlemler, ölçütler,
   hata kayıtları, depo (disk/S3). Alt yol dışa aktarımları web tarafından kullanılır (`@kaynak/pipeline/editorial` vb.).
+  `processEvent` önce satırı sahiplenir (`raw_events.claimed_at`; aynı olay iki kez işlenmez). `story.ts`: konu dizileri — kural anahtarı
+  (KAP konu+kod, TÜİK/TCMB seri, mevzuat adı), KAP "önceki açıklama tarihi", yoksa `relate` (Haiku); dizinin önceki haberleri yazara
+  arka plan olur (yalnızca son paragraf; başlık/dek/ilk paragraf sayıları belgeden — `runEditRules` `contextText`).
 - `packages/db`: Drizzle şeması (`schema.ts`), PGlite/Postgres istemcisi, migration'lar, seed (kaynaklar; KAP/TCMB/TÜİK/… kapalı gelir).
 - `apps/worker`: kayıtlı adapter'ları `sources.enabled`'a göre tarar; takvim saatinde sık tarama; günlük takvim/ölçüt işleri; 07:30 bülten;
   düşen işler `job_failures`.

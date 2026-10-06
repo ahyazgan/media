@@ -12,6 +12,7 @@
  *   pnpm pipeline:run -- --bulletin [--dry]         # sabah bültenini gönder (--dry: yalnızca konsola yaz)
  *   pnpm pipeline:run -- --market                   # EVDS kurlarını market_quotes'a çek (EVDS_API_KEY gerekir)
  *   pnpm pipeline:run -- --source kap --limit 5     # yalnızca en yeni 5 olay (canlı denemede model maliyetini sınırlar)
+ *   pnpm pipeline:run -- --backfill-stories         # mevcut haberleri konu dizilerine bağla (bir kez; model çağırmaz)
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";
@@ -30,6 +31,7 @@ import { createMailer } from "./mail.js";
 import { composeBulletin, renderBulletin, sendBulletin, sponsorFromEnv } from "./newsletter.js";
 import { createPushSender } from "./push.js";
 import { syncMarketQuotes } from "./market.js";
+import { backfillStories } from "./story.js";
 
 const args = new Map<string, string>();
 for (let i = 2; i < process.argv.length; i++) {
@@ -62,6 +64,12 @@ if (args.get("calendar") === "true") {
 }
 
 // --- Piyasa şeridi ---
+if (args.get("backfill-stories") === "true") {
+  log("stories:backfill", await backfillStories(handle.db));
+  await handle.close();
+  process.exit(0);
+}
+
 if (args.get("market") === "true") {
   log("market", await syncMarketQuotes(handle.db, env.EVDS_API_KEY));
   await handle.close();

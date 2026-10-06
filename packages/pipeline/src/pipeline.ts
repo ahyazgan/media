@@ -1,23 +1,26 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { type Article, type Db, rawEvents, documents, articles, reviewQueue, companies, companyEvents, type RawEventRow } from "@kaynak/db";
-import type { ClassifyOutput, WriteOutput, EditResult, FlashInput, FlashOutput } from "@kaynak/agents";
-import { checkFlash, runEditRules } from "@kaynak/agents";
+import type { BackgroundItem, ClassifyOutput, WriteOutput, EditResult, FlashInput, FlashOutput, RelateInput, RelateOutput } from "@kaynak/agents";
+import { checkFlash, formatBackground, runEditRules } from "@kaynak/agents";
 import { documentToText, type RawEvent, type SourceAdapter } from "@kaynak/sources";
 import type { BlobStore } from "./storage.js";
 import { storageKeyFor } from "./storage.js";
 import { makeSlug } from "./slug.js";
 import { linkCalendarEvent } from "./calendar.js";
 import { snapshotArticle } from "./editorial.js";
+import { attachStory, backgroundFor, planStory, trDate } from "./story.js";
 
 /** Ajan çağrıları enjekte edilir: testte sahte, üretimde @kaynak/agents. */
 export interface Agents {
   classify(input: { sourceId: string; title: string; textHead: string; section?: string }): Promise<ClassifyOutput>;
   write(input: {
     sourceId: string; sourceName: string; sourceUrl: string; title: string; documentText: string;
-    publishedAt: string; classify: ClassifyOutput; avoidPhrases?: string[]; stockCodes?: string[];
+    publishedAt: string; classify: ClassifyOutput; avoidPhrases?: string[]; stockCodes?: string[]; background?: BackgroundItem[];
   }): Promise<WriteOutput>;
   /** Flaş: belgeden tek cümle (hızlı model); yoksa flaş üretilmez */
   flash?(input: FlashInput): Promise<FlashOutput>;
+  /** Konu eşleştirme (hızlı model): yeni bildirim aynı şirketin önceki bir haberinin devamı mı? Yoksa yalnızca kural kullanılır */
+  relate?(input: RelateInput): Promise<RelateOutput>;
 }
 
 export interface PipelineDeps {
@@ -66,8 +69,31 @@ export async function ingestEvents(db: Db, events: RawEvent[]): Promise<RawEvent
   return inserted;
 }
 
-/** 2–6) tek bir raw_event'i uçtan uca işler. */
+/** Sahiplenme süresi: bu süreden eski sahiplenme (çöken süreç) yeniden alınabilir. Bir olayın işlenmesi ~1 dk sürer. */
+const CLAIM_TTL_MS = 10 * 60_000;
+
+/**
+ * 2–6) tek bir raw_event'i uçtan uca işler. Önce satırı atomik olarak sahiplenir: izleme döngüsü ile bekleyen süpürmesi (ya da iki
+ * kuyruk işi) aynı olayı aynı anda alırsa yalnızca biri işler (aksi halde iki flaş yayımlanıp iki kez dağıtılıyordu). Hata olursa
+ * sahiplenme boşaltılır; yeniden deneme hemen alabilir.
+ */
 export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, row: RawEventRow): Promise<Outcome> {
+  const claimed = await deps.db.update(rawEvents).set({ claimedAt: new Date() })
+    .where(and(eq(rawEvents.id, row.id), eq(rawEvents.status, "new"), or(isNull(rawEvents.claimedAt), lt(rawEvents.claimedAt, new Date(Date.now() - CLAIM_TTL_MS)))))
+    .returning({ id: rawEvents.id });
+  if (!claimed.length) {
+    deps.log?.("skip:claimed", { externalId: row.externalId });
+    return { kind: "skipped", reason: "başka bir işlemde ya da işlenmiş" };
+  }
+  try {
+    return await processClaimed(deps, adapter, row);
+  } catch (e) {
+    await deps.db.update(rawEvents).set({ claimedAt: null }).where(eq(rawEvents.id, row.id)).catch(() => {});
+    throw e;
+  }
+}
+
+async function processClaimed(deps: PipelineDeps, adapter: SourceAdapter, row: RawEventRow): Promise<Outcome> {
   const log = deps.log ?? (() => {});
   const sourceName = deps.sourceNames?.[row.sourceId] ?? SOURCE_NAMES[row.sourceId] ?? row.sourceId;
   const ev: RawEvent = {
@@ -99,6 +125,17 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
   // Yazara verilen yayın zamanı (resmi listeden) sayı kontrolünde belgeye eşdeğer sayılır
   const groundingExtra = istanbulStamp(row.publishedAt);
 
+  // Konu dizisi: kural (anahtar, KAP'ın önceki açıklama tarihi) ya da aynı şirketin son haberleri arasından model (sınıflandırmayla paralel)
+  const plan = await planStory(deps.db, { sourceId: row.sourceId, title: row.title, payload: row.payload, rawEventId: row.id, publishedAt: row.publishedAt, stockCodes, text });
+  const relateP = plan.candidates.length && deps.agents.relate
+    ? deps.agents.relate({ sourceId: row.sourceId, title: row.title, textHead: text.slice(0, 1500), candidates: plan.candidates.map((c) => ({ date: trDate(c.eventAt), title: c.title, dek: c.dek })) })
+      .catch((e: Error) => { log("relate:error", { externalId: row.externalId, error: e.message }); return undefined; })
+    : undefined;
+  const linkStory = async (articleId: string) => {
+    const storyId = await attachStory(deps.db, articleId, plan, row.publishedAt);
+    if (storyId) log("story", { externalId: row.externalId, storyId, key: plan.key, via: plan.via ?? "yeni" });
+  };
+
   // classify — flaşa uygun kaynakta flaş yazımı paralel başlar (haber değilse sonucu atılır)
   const section = typeof row.payload["section"] === "string" ? (row.payload["section"] as string) : undefined;
   const flashEligible = Boolean(deps.flash && deps.agents.flash && adapter.official && deps.flash.sources.includes(row.sourceId));
@@ -117,6 +154,15 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     return { kind: "skipped", reason: "isNews=false" };
   }
 
+  if (relateP) {
+    const r = await relateP;
+    const hit = r && r.match > 0 ? plan.candidates[r.match - 1] : undefined;
+    if (hit) Object.assign(plan, { joinArticle: hit, via: "model" as const });
+    log("relate", { externalId: row.externalId, candidates: plan.candidates.length, match: r?.match, reason: r?.reason });
+  }
+  const background = await backgroundFor(deps.db, plan, row.id);
+  const contextText = formatBackground(background) || undefined;
+
   // verify (b): başlık–belge anahtar kelime örtüşmesi
   const overlap = keywordOverlap(row.title, text);
   let forceReview: string | undefined;
@@ -125,8 +171,12 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
 
   // Flaş: önemli haber, resmi kaynak, doğrulama sorunu yok, flaş kurallarından geçti → hemen yayın ve dağıtım.
   // Tam metin aynı makaleyi (aynı adresi) günceller; onay gerekirse flaş yayında kalır, tam metin pendingDraft'ta bekler.
-  let flashArticle: Article | undefined;
-  if (flashP && !forceReview && cls.importance >= deps.flash!.minImportance) {
+  // Önceki deneme flaşı yayımlayıp sonra düştüyse (ör. yazım hatası): aynı flaş kullanılır; ikinci flaş ve ikinci dağıtım olmaz
+  const [prevFlash] = await deps.db.select().from(articles)
+    .where(and(eq(articles.rawEventId, row.id), eq(articles.isFlash, true), eq(articles.status, "published"))).limit(1);
+  let flashArticle: Article | undefined = prevFlash;
+  if (prevFlash) log("flash:reuse", { externalId: row.externalId, slug: prevFlash.slug });
+  else if (flashP && !forceReview && cls.importance >= deps.flash!.minImportance) {
     const f = await flashP;
     const check = f ? checkFlash(f, text, { groundingExtra }) : { ok: false, reasons: ["flaş üretilemedi"] };
     if (f && check.ok) {
@@ -153,15 +203,16 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
     sourceId: row.sourceId, sourceName, sourceUrl: fetched.url, title: row.title,
     documentText: text, publishedAt: row.publishedAt.toISOString(), classify: cls,
     ...(stockCodes.length ? { stockCodes } : {}),
+    ...(background.length ? { background } : {}),
   };
   let draft = await deps.agents.write(writeInput);
   // Uzunluk alt sınırı kaynağın sabit kalıplarından arınmış metne göre (KAP: sorumluluk beyanı ve "Özet Bilgi" alanları)
   const lengthBasisText = adapter.contentText?.(text);
-  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra, lengthBasisText });
+  let edit: EditResult = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, groundingExtra, lengthBasisText, contextText });
   if (edit.decision === "retry") {
     log("edit:retry", { externalId: row.externalId, reasons: edit.reasons });
     draft = await deps.agents.write({ ...writeInput, avoidPhrases: edit.banned.map((b) => b.match) });
-    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra, lengthBasisText });
+    edit = runEditRules(draft, text, { importance: cls.importance, reviewThreshold: deps.reviewThreshold, isRetry: true, groundingExtra, lengthBasisText, contextText });
   }
 
   const status = edit.decision === "reject" ? "rejected" : edit.decision === "publish" && !forceReview ? "published" : "review";
@@ -184,6 +235,7 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
       await deps.db.update(articles).set({ pendingDraft: full, updatedAt: now, editorNote: `flaş yayında; tam metin onay bekliyor: ${reasons.join(" | ")}` })
         .where(eq(articles.id, flashArticle.id));
       await deps.db.insert(reviewQueue).values({ articleId: flashArticle.id, reason: `flaş yayında — tam metin: ${reasons.join(" | ") || "insan onayı"}` });
+      await linkStory(flashArticle.id);
       log("edit:review", { externalId: row.externalId, reasons, flash: flashArticle.slug });
       return { kind: "review", articleId: flashArticle.id, reasons };
     }
@@ -191,6 +243,7 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
       .where(eq(articles.id, flashArticle.id)).returning();
     log("publish", { externalId: row.externalId, slug: flashArticle.slug, replacedFlash: true });
     await snapshotArticle(deps.db, updated!, "tam metin (otomatik, flaşın yerine)");
+    await linkStory(updated!.id);
     await linkCalendarFor(deps, row, updated!.id, log);
     // Dağıtım flaşla yapıldı; burada yalnızca sayfalar yenilenir
     await (deps.onUpdated ?? deps.onPublished)?.(updated!, { sourceId: row.sourceId });
@@ -219,16 +272,19 @@ export async function processEvent(deps: PipelineDeps, adapter: SourceAdapter, r
       // Flaş yayında kalır (kendi kurallarından geçti); editör tam metni elle yazabilir
       await deps.db.update(articles).set({ editorNote: `flaş yayında; otomatik tam metin reddedildi: ${reasons.join(" | ")}`, updatedAt: now }).where(eq(articles.id, flashArticle.id));
       await deps.db.insert(reviewQueue).values({ articleId: flashArticle.id, reason: `flaş yayında — tam metin reddedildi: ${reasons.join(" | ")}` });
+      await linkStory(flashArticle.id);
     }
     return { kind: "rejected", articleId: article.id, reasons };
   }
   if (status === "review") {
     await deps.db.insert(reviewQueue).values({ articleId: article.id, reason: reasons.join(" | ") || "insan onayı" });
+    await linkStory(article.id);
     log("edit:review", { externalId: row.externalId, reasons });
     return { kind: "review", articleId: article.id, reasons };
   }
   log("publish", { externalId: row.externalId, slug });
   await snapshotArticle(deps.db, article, "ilk yayın (otomatik)");
+  await linkStory(article.id);
   await linkCalendarFor(deps, row, article.id, log);
   await deps.onPublished?.(article, { sourceId: row.sourceId });
   return { kind: "published", articleId: article.id, slug };

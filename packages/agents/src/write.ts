@@ -26,7 +26,7 @@ export async function writeDetailed(input: WriteInput): Promise<Detailed<WriteOu
       content: writeUserMessage({
         sourceName: input.sourceName, sourceUrl: input.sourceUrl, title: input.title, publishedAt: input.publishedAt,
         summaryHint: input.classify.summaryHint, category: input.classify.category, documentText: doc,
-        avoidPhrases: input.avoidPhrases, stockCodes: input.stockCodes,
+        avoidPhrases: input.avoidPhrases, stockCodes: input.stockCodes, background: input.background,
       }),
     }],
     output_config: { format: zodOutputFormat(WriteOutput) },

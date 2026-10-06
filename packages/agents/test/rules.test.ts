@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEditRules, quoteAppearsIn, checkFlash } from "../src/edit/rules.js";
-import { writeUserMessage } from "../src/prompts.js";
+import { formatBackground, writeUserMessage } from "../src/prompts.js";
 import type { WriteOutput } from "../src/schemas.js";
 
 const DOC = `Ticaret Bakanlığından: MADDE 1- 30/5/2018 tarihli ve 30436 sayılı Resmî Gazete'de yayımlanan Yönetmeliğin 7 nci maddesinin ikinci fıkrasına aşağıdaki cümleler eklenmiştir. "Komisyon, ticaret il müdürü başkanlığında üç üyeden oluşur." MADDE 3- Bu Yönetmelik 1/10/2025 tarihinde yürürlüğe girer.`;
@@ -35,6 +35,26 @@ describe("runEditRules", () => {
     expect(runEditRules(withTime, DOC, { importance: 2, reviewThreshold: 4, groundingExtra: "02.10.2026 15:57:25 2 Ekim 2026 15:57" }).decision).toBe("publish");
     const invented = { ...withTime, dek: withTime.dek + " Tutar 4,2 milyon TL." };
     expect(runEditRules(invented, DOC, { importance: 2, reviewThreshold: 4, groundingExtra: "02.10.2026 15:57:25" }).decision).toBe("reject");
+  });
+  it("arka plan (contextText): gövdenin son paragrafında sayı kabul edilir; başlık/dek/ilk paragrafa taşınırsa review, uydurma sayı yine reject", () => {
+    const ctx = formatBackground([{ date: "12 Eylül 2025", title: "Uzlaşma komisyonu yönetmeliği", dek: "Komisyon sayısı 81 ile çıkarıldı.", facts: [] }]);
+    const withBg = { ...good, bodyMarkdown: `${good.bodyMarkdown}\n\nBakanlık 12 Eylül 2025'te komisyon sayısını 81 olarak açıklamıştı.` };
+    expect(runEditRules(withBg, DOC, { importance: 2, reviewThreshold: 4 }).decision).toBe("reject");
+    expect(runEditRules(withBg, DOC, { importance: 2, reviewThreshold: 4, contextText: ctx }).decision).toBe("publish");
+    const inLead = { ...withBg, dek: "Komisyon sayısı 81'e çıkıyor; değişiklik 1 Ekim 2025'te yürürlükte." };
+    const r = runEditRules(inLead, DOC, { importance: 2, reviewThreshold: 4, contextText: ctx });
+    expect(r.decision).toBe("review");
+    expect(r.reasons.join(" ")).toMatch(/arka plan: .*81/);
+    const invented = { ...withBg, bodyMarkdown: `${withBg.bodyMarkdown} Bütçe 9,9 milyon TL.` };
+    expect(runEditRules(invented, DOC, { importance: 2, reviewThreshold: 4, contextText: ctx }).decision).toBe("reject");
+  });
+  it("yazar mesajı: arka plan belgeden sonra, ayrı blokta; yoksa blok yok", () => {
+    const base = { sourceName: "KAP", sourceUrl: "u", title: "t", publishedAt: "p", summaryHint: "s", category: "borsa", documentText: "BELGE" };
+    expect(writeUserMessage(base)).not.toContain("ARKA PLAN");
+    const m = writeUserMessage({ ...base, background: [{ date: "2 Ekim 2026", title: "Önceki", dek: "Spot", facts: ["Olgu 1", "Olgu 2"] }] });
+    expect(m.indexOf("--- BELGE METNİ SONU ---")).toBeLessThan(m.indexOf("--- ARKA PLAN"));
+    expect(m).toContain("[1] 2 Ekim 2026 — Önceki");
+    expect(m).toContain("Olgular: Olgu 1 / Olgu 2");
   });
   it("yasaklı kalıpta ilk denemede retry, ikincide review", () => {
     const bad = { ...good, bodyMarkdown: good.bodyMarkdown + " Uzmanlara göre etkisi büyük olabilir." };

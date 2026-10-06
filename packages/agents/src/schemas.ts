@@ -52,6 +52,17 @@ export interface WriteInput {
   avoidPhrases?: string[];
   /** Kaynağın resmi listesindeki borsa kodları (KAP: bildirim PDF'inde kod geçmez, liste kaydından gelir) */
   stockCodes?: string[];
+  /** Aynı konu dizisinde daha önce yayımladığımız haberler (yeniden eskiye); yalnızca son paragrafta, tarihiyle kullanılır */
+  background?: BackgroundItem[];
+}
+
+/** Arka plan: daha önce yayımlanmış, kendi resmi belgesine dayanan haber (başlık, spot, olgular; gövde verilmez) */
+export interface BackgroundItem {
+  /** Kaynak belgenin yayın tarihi, Türkçe ("2 Ekim 2026") */
+  date: string;
+  title: string;
+  dek: string;
+  facts: string[];
 }
 
 /** Flaş: belgeden tek cümlelik ilk haber (tam metin hazırlanırken yayımlanır) */
@@ -70,3 +81,19 @@ export interface FlashInput {
   textHead: string;
   stockCodes?: string[];
 }
+
+/** İlişki: yeni bildirim, aynı şirketin daha önce haberleştirilmiş bir olayının devamı mı? */
+export interface RelateInput {
+  sourceId: string;
+  title: string;
+  /** Belgenin ilk ~1.500 karakteri */
+  textHead: string;
+  candidates: { date: string; title: string; dek: string }[];
+}
+
+export const RelateOutput = z.object({
+  /** Adayın sıra numarası (1'den başlar); devamı değilse 0 */
+  match: z.number().int().min(0),
+  reason: z.string(),
+});
+export type RelateOutput = z.infer<typeof RelateOutput>;
